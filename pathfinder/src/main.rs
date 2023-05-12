@@ -1,6 +1,5 @@
 use env_logger;
 use log::info;
-use log::warn;
 use simplers_optimization::Optimizer;
 use statrs::statistics::Statistics;
 use std::env;

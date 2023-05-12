@@ -1,6 +1,5 @@
 use log::{debug, info};
 use priority_queue::DoublePriorityQueue;
-use statrs::statistics::Statistics;
 use std::collections::{HashMap, HashSet};
 
 use crate::store_connector::StoreConnector;
