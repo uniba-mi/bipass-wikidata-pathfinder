@@ -16,5 +16,4 @@ WORKDIR /wembed_api
 
 EXPOSE 5000
 
-RUN python3 wembed_api.py init
-ENTRYPOINT python3 wembed_api.py server
+ENTRYPOINT python3 wembed_api.py

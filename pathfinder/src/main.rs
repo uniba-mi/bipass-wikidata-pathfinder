@@ -398,8 +398,7 @@ fn playground(config: &toml::map::Map<String, toml::Value>) {
         config["entity_limit"].as_integer().unwrap() as usize,
     );
 
-    // pathfinder.get_adjacent_entities(entity_a, 2);
-    let search_params = (0.0, 1.0, 0.0);
+    let search_params = (0.23031994047619048, 0.02808779761904762, 0.58984375);
 
     // source -> target: path length 1
     let mut entity_a = "Q42";

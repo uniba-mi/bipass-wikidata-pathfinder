@@ -5,8 +5,8 @@ from flask import Flask, jsonify, request
 from sentence_transformers import SentenceTransformer
 
 
-model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
 app = Flask(__name__)
+model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
 
 
 @app.route("/")

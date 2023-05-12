@@ -23,7 +23,7 @@ This repository contains all relevant materials that are necessary to reproduce 
  - The derived dual-entity query dataset
  - A Pathfinding System for finding paths between the entities in Wikidata
 
- The following paragraphs provide additional information about each artifact. This includes instructions for reproducing the results mentioned in the paper.
+ The following paragraphs provide additional information about each artifact. This includes instructions for reproducing the results mentioned in the paper. Due to updates applied to Wikidata after the results for the paper have been retrieved, rerunning the optimizer and the benchmark might yield slightly different results. To alleviate this problem, all Wikidata information required for finding paths between the queries in the employed dual-entity query dataset was cached and included in this repository.
 
 ## Requirements
 
