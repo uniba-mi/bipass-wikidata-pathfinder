@@ -1,0 +1,31 @@
+version: "3"
+
+services:
+  pathfinder:
+    build: ./pathfinder
+    container_name: pathfinder
+    volumes:
+      - ./pathfinder:/pathfinder
+      - ./data:/data
+    network_mode: host
+  query_factory:
+    build: ./query_factory
+    container_name: query_factory
+    volumes:
+      - ./query_factory:/src
+      - ./data:/data
+    network_mode: host
+  wikidata_api:
+    build: ./wikidata_api
+    container_name: wikidata_api
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./wikidata_api:/wikidata_api
+  wembed_api:
+    build: ./wembed_api
+    container_name: wembed_api
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./wembed_api:/wembed_api
