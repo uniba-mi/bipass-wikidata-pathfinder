@@ -12,7 +12,7 @@
     •
     <a href="#dual-entity-query-dataset">Dual-Entity Query Dataset</a>
     •
-    <a href="#pathfinder-implementation">Pathfinder Implementation</a>
+    <a href="#pathfinding-system">Pathfinding System</a>
     •
     <a href="#license">License</a>
 </p>
