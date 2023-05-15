@@ -167,12 +167,12 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
     // run the optimizer
     let (min_value, coordinates) = Optimizer::minimize(&f, &input_interval, iterations);
 
-    let results_string = format!(
-        "min value: {} found in alpha={}, beta={}, gamma={}",
-        min_value, coordinates[0], coordinates[1], coordinates[2]
-    );
-
-    println!("{}", results_string);
+    writeln!(
+        file,
+        "{},{},{},{}",
+        coordinates[0], coordinates[1], coordinates[2], min_value
+    )
+    .unwrap();
 }
 
 fn benchmark(config: &toml::map::Map<String, toml::Value>) {

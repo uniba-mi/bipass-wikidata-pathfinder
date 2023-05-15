@@ -9,7 +9,7 @@ wikidata_api = "http://127.0.0.1:5000"
 query_file_paths = ["../data/wikidata_queries_10000_topics_genre.csv"]
 
 optimizer_iterations = 100
-optimizer_sample_percentage = 0.1
+optimizer_sample_percentage = 0.2
 optimizer_results_path = "../data/optimizer_results.csv"
 
 benchmark_results_path = "../data/benchmark_results"
