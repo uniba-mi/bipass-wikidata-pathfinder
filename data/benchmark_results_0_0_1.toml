@@ -1,4 +1,4 @@
-number_of_queries = 1077
-success_rate = 0.58960074
-average_visited_entities = 25.570078
-path_lengths_entities = 8.483464
+number_of_queries = 957
+success_rate = 0.5935214
+average_visited_entities = 26.045774
+path_lengths_entities = 8.573944
