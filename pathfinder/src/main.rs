@@ -167,12 +167,12 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
     // run the optimizer
     let (min_value, coordinates) = Optimizer::minimize(&f, &input_interval, iterations);
 
-    writeln!(
-        file,
-        "{},{},{},{}",
-        coordinates[0], coordinates[1], coordinates[2], min_value
-    )
-    .unwrap();
+    let results_string = format!(
+        "min value: {} found in alpha={}, beta={}, gamma={}",
+        min_value, coordinates[0], coordinates[1], coordinates[2]
+    );
+
+    println!("{}", results_string);
 }
 
 fn benchmark(config: &toml::map::Map<String, toml::Value>) {
@@ -198,33 +198,13 @@ fn benchmark(config: &toml::map::Map<String, toml::Value>) {
         config["entity_limit"].as_integer().unwrap() as usize,
     );
 
-    // read optimized configuration from file
-    let path = config["optimizer_results_path"].as_str().unwrap();
-    let mut reader = csv::Reader::from_path(path).unwrap();
-
-    let optimizer_results = reader
-        .records()
-        .map(|r| r.unwrap())
-        .map(|r| {
-            (
-                r.get(0).unwrap().to_owned().parse::<f64>().unwrap(),
-                r.get(1).unwrap().to_owned().parse::<f64>().unwrap(),
-                r.get(2).unwrap().to_owned().parse::<f64>().unwrap(),
-            )
-        })
-        .collect::<Vec<(f64, f64, f64)>>();
-
-    let optimized_params = optimizer_results.last().unwrap();
-
-    println!("{:?}", optimized_params);
-
     // create configurations for benchmarking
     let benchmark_configs = vec![
-        optimized_params,
-        &(0.0, 1.0, 0.0), // breadth-first
-        &(1.0, 0.0, 1.0),
-        &(0.0, 0.0, 1.0),
-        &(1.0, 0.5, 1.0),
+        &(0.6991370827362581, 0.10886217551256613, 0.822998046875), // optimized
+        &(0.0, 1.0, 0.0), // uninformed
+        &(1.0, 0.0, 1.0), // semantics-only
+        &(0.0, 0.0, 1.0), // greedy
+        &(1.0, 0.5, 1.0), // balanced
     ];
 
     // collect test queries for the benchmark from the Wikidata query files
