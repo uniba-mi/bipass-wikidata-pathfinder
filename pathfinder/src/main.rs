@@ -162,7 +162,7 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
     let input_interval = vec![(0.0, 1.0), (0.0, 1.0), (0.0, 1.0)];
 
     // the number of iterations
-    let iterations = config["optimizer_iterations"].as_integer().unwrap() as usize;
+    let iterations = config["optimizer_iterations"].as_integer().unwrap() as usize - 1;
 
     // run the optimizer
     let (min_value, coordinates) = Optimizer::minimize(&f, &input_interval, iterations);
