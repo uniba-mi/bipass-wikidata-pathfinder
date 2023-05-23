@@ -5,7 +5,8 @@
     <br>
 </p>
 
-<p align="center">
+<!-- TODO: not compatible with anonymized version of the repo; add this afterwards -->
+<!-- <p align="center">
     <a href="#requirements">Requirements</a>
     •
     <a href="#query-factory">Query Factory</a>
@@ -15,7 +16,7 @@
     <a href="#pathfinding-system">Pathfinding System</a>
     •
     <a href="#license">License</a>
-</p>
+</p> -->
 
 This repository contains all relevant materials that are necessary to reproduce the outcomes described in the research paper _Further Investigation of Fast Pathfinding in Wikidata_. This comprises the following artifacts:
 
@@ -25,7 +26,7 @@ This repository contains all relevant materials that are necessary to reproduce 
 
 __Tip for users of the anonymized version of this repository__: To download the content of this repository more easily, we included a [ZIP file](./wikidata-pathfinder-0.1.1.zip) with all files of this repository.   
 
-The following paragraphs provide additional information about each artifact. This includes instructions for reproducing the results mentioned in the paper. Due to updates applied to Wikidata after the results for the paper have been retrieved, rerunning the optimizer and the benchmark might yield slightly different results. To alleviate this problem, all Wikidata information required for finding paths between the queries in the employed dual-entity query dataset was cached and included in this repository.
+The next paragraphs provide additional information about each artifact. This includes instructions for reproducing the results mentioned in the paper. Due to updates applied to Wikidata after the results for the paper have been retrieved, rerunning the optimizer and the benchmark might yield slightly different results. To alleviate this problem, all Wikidata information required for finding paths between the queries in the employed dual-entity query dataset was cached and included in this repository.
 
 ## Requirements
 
@@ -39,7 +40,7 @@ The purpose of the Query Factory is to derive dual-entity queries for pathfindin
 
 To run the Query Factory proceed as follows:
 
-1. Select the TREC file from which queries should be derived by adjusting the commented parts in the [query_factory.py](./src/query_factory.py). 
+1. Select the TREC file from which queries should be derived by adjusting the commented parts in the [query_factory.py](./query_factory/query_factory.py). 
 2. Run ``docker compose run query_factory`` from the root directory.
 3. In the new bash run ``factory 07`` to start the query factory. Warning: This will overwrite the already present [dual-entity query dataset](./data/wikidata_queries_10000_topics_genre.csv).
 
