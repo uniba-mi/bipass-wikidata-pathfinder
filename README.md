@@ -25,7 +25,7 @@ This repository contains all relevant materials that are necessary to reproduce 
 
 __Tip for users of the anonymized version of this repository__: To download the content of this repository more easily, we included a [ZIP file](./wikidata-pathfinder-0.1.1.zip) with all files of this repository.   
 
-The following paragraphs provide additional information about each artifact. This includes instructions for reproducing the results mentioned in the paper. Due to updates applied to Wikidata after the results for the paper have been retrieved, rerunning the optimizer and the benchmark might yield slightly different results. To alleviate this problem, all Wikidata information required for finding paths between the queries in the employed dual-entity query dataset was cached and included in this repository.
+The next paragraphs provide additional information about each artifact. This includes instructions for reproducing the results mentioned in the paper. Due to updates applied to Wikidata after the results for the paper have been retrieved, rerunning the optimizer and the benchmark might yield slightly different results. To alleviate this problem, all Wikidata information required for finding paths between the queries in the employed dual-entity query dataset was cached and included in this repository.
 
 ## Requirements
 
