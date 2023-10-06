@@ -18,7 +18,7 @@ def query_wikidata(query):
 
     try:
         results = sparql_wrapper.query().convert()
-        sleep(3)
+        sleep(3) # required to comply with Wikidata's rate limit policy
     except Exception as e:
         print(f"An error occurred while querying Wikidata: {e}")
         results = {}
@@ -164,6 +164,7 @@ def adjacent_entities():
         }
     ), 200
 
+
 @app.route("/label_description", methods=["GET"])
 def label_description():
     entity = request.args.get("entity")
@@ -205,6 +206,7 @@ def label_description():
             "description": description,
         }
     ), 200
+
 
 @app.route("/id", methods=["GET"])
 def id():

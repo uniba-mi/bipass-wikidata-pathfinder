@@ -47,7 +47,6 @@ fn main() {
     }
 }
 
-// TODO maybe switch to gradient descent or so with argmin crate (https://github.com/argmin-rs/argmin)
 fn optimizer(config: &toml::map::Map<String, toml::Value>) {
     // create ApiConnector instance
     let api_connector: ApiConnector = api_connector::ApiConnector::new(
@@ -116,7 +115,7 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
     writeln!(file, "alpha,beta,gamma,objective_value").unwrap();
 
     // the function to be optimized
-    let f = |search_params: &[f64]| {
+    let f = |hyperparameter_config: &[f64]| {
         // to collect the scores of the individual pathfinder runs
         let mut collected_scores: Vec<f64> = Vec::new();
 
@@ -126,14 +125,18 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
 
             info!(
                 "******* Optimizer processes query from TREC {} query with alpha={}, beta={}, gamma={}",
-                trec_id, search_params[0], search_params[1], search_params[2]
+                trec_id, hyperparameter_config[0], hyperparameter_config[1], hyperparameter_config[2]
             );
 
             // find a path given the provided configuration
             let (_, _, score, _) = pathfinder.find_path(
                 source_entity,
                 target_entity,
-                (search_params[0], search_params[1], search_params[2]),
+                (
+                    hyperparameter_config[0],
+                    hyperparameter_config[1],
+                    hyperparameter_config[2],
+                ),
             );
 
             collected_scores.push(score);
@@ -151,7 +154,10 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
         writeln!(
             file,
             "{},{},{},{}",
-            search_params[0], search_params[1], search_params[2], objective_value
+            hyperparameter_config[0],
+            hyperparameter_config[1],
+            hyperparameter_config[2],
+            objective_value
         )
         .unwrap();
 
@@ -201,10 +207,10 @@ fn benchmark(config: &toml::map::Map<String, toml::Value>) {
     // create configurations for benchmarking
     let benchmark_configs = vec![
         &(0.6991370827362581, 0.10886217551256613, 0.822998046875), // optimized
-        &(0.0, 1.0, 0.0), // uninformed
-        &(1.0, 0.0, 1.0), // semantics-only
-        &(0.0, 0.0, 1.0), // greedy
-        &(1.0, 0.5, 1.0), // balanced
+        &(0.0, 1.0, 0.0),                                           // uninformed
+        &(1.0, 0.0, 1.0),                                           // semantics-only
+        &(0.0, 0.0, 1.0),                                           // greedy
+        &(1.0, 0.5, 1.0),                                           // balanced
     ];
 
     // collect test queries for the benchmark from the Wikidata query files
@@ -265,16 +271,8 @@ fn benchmark(config: &toml::map::Map<String, toml::Value>) {
             );
 
             // execute the pathfinding
-            let (found_path_forwards, found_path_backwards, _, visited_entities) = pathfinder
-                .find_path(
-                    source_entity,
-                    target_entity,
-                    (
-                        hyperparameter_config.0,
-                        hyperparameter_config.1,
-                        hyperparameter_config.2,
-                    ),
-                );
+            let (found_path_forwards, found_path_backwards, _, visited_entities) =
+                pathfinder.find_path(source_entity, target_entity, hyperparameter_config.to_owned());
 
             // update results
             if found_path_forwards.is_empty() {
@@ -378,38 +376,38 @@ fn playground(config: &toml::map::Map<String, toml::Value>) {
         config["entity_limit"].as_integer().unwrap() as usize,
     );
 
-    let search_params = (0.23031994047619048, 0.02808779761904762, 0.58984375);
+    let hyperparameter_config = (0.23031994047619048, 0.02808779761904762, 0.58984375);
 
     // source -> target: path length 1
     let mut entity_a = "Q42";
     let mut entity_b = "Q5";
 
-    pathfinder.find_path(entity_a, entity_b, search_params);
+    pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
 
     // target -> source: path length 1
-    pathfinder.find_path(entity_b, entity_a, search_params);
+    pathfinder.find_path(entity_b, entity_a, hyperparameter_config);
 
     // source -> intersecting <- target: path length 2
     entity_a = "Q42";
     entity_b = "Q762";
 
-    pathfinder.find_path(entity_a, entity_b, search_params);
+    pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
 
     // target -> intersecting <- source: path length 2
-    pathfinder.find_path(entity_b, entity_a, search_params);
+    pathfinder.find_path(entity_b, entity_a, hyperparameter_config);
 
     // source -> intersecting <- target: path length 3
     entity_a = "Q42";
     entity_b = "Q389908";
 
-    pathfinder.find_path(entity_a, entity_b, search_params);
+    pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
 
     // target -> intersecting <- source: path length 3
-    pathfinder.find_path(entity_b, entity_a, search_params);
+    pathfinder.find_path(entity_b, entity_a, hyperparameter_config);
 
     // actual test query from derived query set
     entity_a = "Q376657";
     entity_b = "Q1951366";
 
-    pathfinder.find_path(entity_a, entity_b, search_params);
+    pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
 }
