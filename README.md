@@ -5,8 +5,7 @@
     <br>
 </p>
 
-<!-- TODO: not compatible with anonymized version of the repo; add this afterwards -->
-<!-- <p align="center">
+<p align="center">
     <a href="#requirements">Requirements</a>
     •
     <a href="#query-factory">Query Factory</a>
@@ -16,17 +15,15 @@
     <a href="#pathfinding-system">Pathfinding System</a>
     •
     <a href="#license">License</a>
-</p> -->
+</p>
 
-This repository contains all relevant materials that are necessary to reproduce the outcomes described in the research paper _Further Investigation of Fast Pathfinding in Wikidata_. This comprises the following artifacts:
+This repository contains all materials for reproducing the outcomes described in the research paper [Further Investigation of Fast Pathfinding in Wikidata](https://doi.org/10.3233/ssw230009). This comprises the following artifacts:
 
  - A Query Factory for deriving a dual-entity query dataset for pathfinding in Wikidata
  - The derived dual-entity query dataset
  - A Pathfinding System for finding paths between the entities in Wikidata
 
-__Tip for users of the anonymized version of this repository__: To download the content of this repository more easily, we included a [ZIP file](./bipass-wikidata-pathfinder.zip) with all files of this repository.   
-
-The next paragraphs provide additional information about each artifact. This includes instructions for reproducing the results mentioned in the paper. Due to updates applied to Wikidata after the results for the paper have been retrieved, rerunning the optimizer and the benchmark might yield slightly different results. To alleviate this problem, all Wikidata information required for finding paths between the queries in the employed dual-entity query dataset was cached and included in this repository.
+The next paragraphs provide information about each artifact. This includes instructions for reproducing the results mentioned in the paper. Due to continuous updates made to Wikidata, rerunning the optimizer and the benchmark might yield slightly different results. To alleviate this problem, all information retrieved from Wikidata was cached and included in this repository.
 
 ## Requirements
 
