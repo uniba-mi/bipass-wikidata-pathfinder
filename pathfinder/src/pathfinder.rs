@@ -53,7 +53,10 @@ impl<'a> Pathfinder<'a> {
         // initialize set of visited entities that is used to check if entity limit is reached
         let mut visited_entities: HashSet<String> = HashSet::new();
 
-        // initialize found path and intersecting entity
+        // TODO initialize map to keep track of predicates; does this work?
+        let mut property_map: HashMap<String, String> = HashMap::new();
+
+        // initialize found path
         let mut found_path_forwards: Vec<String> = vec![];
         let mut found_path_backwards: Option<Vec<String>> = None;
 

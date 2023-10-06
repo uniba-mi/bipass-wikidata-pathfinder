@@ -21,13 +21,13 @@ This repository contains all materials for reproducing the outcomes described in
 
  - A Query Factory for deriving a dual-entity query dataset for pathfinding in Wikidata
  - The derived dual-entity query dataset
- - A Pathfinding System for finding paths between the entities in Wikidata
+ - A Pathfinding System for finding paths between arbitrary entities in Wikidata
 
 The next paragraphs provide information about each artifact. This includes instructions for reproducing the results mentioned in the paper. Due to continuous updates made to Wikidata, rerunning the optimizer and the benchmark might yield slightly different results. To alleviate this problem, all information retrieved from Wikidata was cached and included in this repository.
 
 ## Requirements
 
-Only the `docker` and `docker-compose` scripts are required to run the programs within this repository. All dependencies are automatically installed using the corresponding Dockerfiles. This ensures reproducibility and ease of use. For guidance on how to install Docker click [here](https://docs.docker.com/get-docker/).
+Only `docker` and `docker-compose` are required to run the programs within this repository. All dependencies are automatically installed using the corresponding Dockerfiles. This ensures reproducibility and ease of use. For guidance on how to install Docker click [here](https://docs.docker.com/get-docker/).
 
 ## Query Factory
 
