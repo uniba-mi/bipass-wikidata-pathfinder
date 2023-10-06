@@ -388,12 +388,6 @@ impl<'a> Pathfinder<'a> {
             .map(|entity| format!("{} ({})", entity, self.store_connector.get_label(entity)))
             .collect();
 
-        let pairs = forwards_path.iter().zip(forwards_path.iter().skip(1));
-
-        for pair in pairs {
-            println!("{:?}", pair);
-        }
-
         let mut path_string = fragment.join(" -> ");
 
         if backwards_path.is_some() {
