@@ -1,11 +1,9 @@
-use std::vec;
-
 use bincode;
 use serde::{Deserialize, Serialize};
 use sled::{Batch, Db};
 
 use crate::api_connector::ApiConnector;
-use log::{debug, warn, info};
+use log::{debug, warn};
 
 #[derive(Serialize, Deserialize)]
 struct StoreValue {
@@ -117,9 +115,6 @@ impl<'a> StoreConnector<'a> {
             entity,
             adjacent_entities.len()
         );
-
-        info!("{:?}", adjacent_entities);
-        exit()
 
         adjacent_entities
     }

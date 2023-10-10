@@ -246,7 +246,7 @@ impl<'a> Pathfinder<'a> {
                     || tentative_costs < costs.get(&adjacent_entity).unwrap().to_owned()
                 {
                     came_from.insert(adjacent_entity.clone(), current_entity.to_owned());
-                    prev_prop.insert(adjacent_entity.clone(), "unknown".to_string());
+                    prev_prop.insert(adjacent_entity.clone(), prop);
                     costs.insert(adjacent_entity.clone(), tentative_costs);
 
                     if queue.get(&adjacent_entity) == None {
@@ -422,15 +422,11 @@ impl<'a> Pathfinder<'a> {
                 .get_label(path_forwards.first().unwrap())
         );
 
-        info!("{:?}", path_forwards);
-        info!("{:?}", path_backwards);
-        info!("{:?}", props_forwards);
-        info!("{:?}", props_backwards);
-
         for (prop, entity) in props_forwards.iter().zip(path_forwards.iter().skip(1)) {
             path_string += &format!(
-                " -{}-> {} ({})",
+                " -{} ({})-> {} ({})",
                 prop,
+                self.store_connector.get_label(prop),
                 entity,
                 self.store_connector.get_label(entity)
             )
@@ -443,8 +439,9 @@ impl<'a> Pathfinder<'a> {
             .zip(path_backwards.clone().iter().rev().skip(1))
         {
             path_string += &format!(
-                " <-{}- {} ({})",
+                " <-{} ({})- {} ({})",
                 prop,
+                self.store_connector.get_label(prop),
                 entity,
                 self.store_connector.get_label(entity)
             )
