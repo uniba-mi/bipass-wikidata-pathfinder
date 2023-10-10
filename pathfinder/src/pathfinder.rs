@@ -34,7 +34,7 @@ impl<'a> Pathfinder<'a> {
         source_entity: &str,
         target_entity: &str,
         search_params: (f64, f64, f64),
-    ) -> (Vec<String>, Option<Vec<String>>, f64, usize) {
+    ) -> (Vec<String>, Vec<String>, f64, usize) {
         // initialize mappings and adjacency list based on source and target entity
         self.store_connector.get_adjacent_entities(source_entity);
         self.store_connector.get_adjacent_entities(target_entity);
@@ -53,16 +53,16 @@ impl<'a> Pathfinder<'a> {
         // initialize set of visited entities that is used to check if entity limit is reached
         let mut visited_entities: HashSet<String> = HashSet::new();
 
-        // TODO initialize map to keep track of predicates; does this work?
-        let mut property_map: HashMap<String, String> = HashMap::new();
-
         // initialize found path
         let mut found_path_forwards: Vec<String> = vec![];
-        let mut found_path_backwards: Option<Vec<String>> = None;
+        let mut found_path_backwards: Vec<String> = vec![];
+        let mut props_forwards: Vec<String> = vec![];
+        let mut props_backwards: Vec<String> = vec![];
 
         // initialize data structures for direction source -> target
         let mut costs_from_source: HashMap<String, i64> = HashMap::new();
         let mut came_from_source: HashMap<String, String> = HashMap::new();
+        let mut prev_prop_from_source: HashMap<String, String> = HashMap::new();
         let mut queue_from_source: DoublePriorityQueue<String, i64> = DoublePriorityQueue::new();
 
         // push source entity into priority queue
@@ -71,7 +71,7 @@ impl<'a> Pathfinder<'a> {
             self.calculate_costs(
                 source_entity,
                 target_entity,
-                self.reconstruct_path(came_from_source.clone(), source_entity),
+                vec![source_entity.to_string()],
                 search_params,
             ),
         );
@@ -84,6 +84,7 @@ impl<'a> Pathfinder<'a> {
         // initialize data structures for direction target -> source
         let mut costs_from_target: HashMap<String, i64> = HashMap::new();
         let mut came_from_target: HashMap<String, String> = HashMap::new();
+        let mut prev_prop_from_target: HashMap<String, String> = HashMap::new();
         let mut queue_from_target: DoublePriorityQueue<String, i64> = DoublePriorityQueue::new();
 
         // push target entity into priority queue
@@ -92,7 +93,7 @@ impl<'a> Pathfinder<'a> {
             self.calculate_costs(
                 source_entity,
                 target_entity,
-                self.reconstruct_path(came_from_target.clone(), target_entity),
+                vec![target_entity.to_string()],
                 search_params,
             ),
         );
@@ -139,16 +140,28 @@ impl<'a> Pathfinder<'a> {
             // reconstruct path
             let mut path = match direction {
                 Direction::FromSourceToTarget => {
-                    self.reconstruct_path(came_from_source.clone(), &current_entity)
+                    self.reconstruct_path(
+                        came_from_source.clone(),
+                        prev_prop_from_source.clone(),
+                        &current_entity,
+                    )
+                    .0
                 }
                 Direction::FromTargetToSource => {
-                    self.reconstruct_path(came_from_target.clone(), &current_entity)
+                    self.reconstruct_path(
+                        came_from_target.clone(),
+                        prev_prop_from_target.clone(),
+                        &current_entity,
+                    )
+                    .0
                 }
             };
 
+            let empty_vec: Vec<String> = vec![];
+
             debug!(
                 "*** Processing path {} ({})",
-                self.path_to_string(&path, &None),
+                self.path_to_string(&path, &empty_vec, &empty_vec, &empty_vec),
                 if direction == Direction::FromSourceToTarget {
                     "source -> target"
                 } else {
@@ -185,11 +198,11 @@ impl<'a> Pathfinder<'a> {
                     "Path found via an intersection on entity {}.",
                     current_entity
                 );
-                found_path_forwards = self.reconstruct_path(came_from_source, &current_entity);
 
-                let found_path_fragment = self.reconstruct_path(came_from_target, &current_entity);
-
-                found_path_backwards = Some(found_path_fragment);
+                (found_path_forwards, props_forwards) =
+                    self.reconstruct_path(came_from_source, prev_prop_from_source, &current_entity);
+                (found_path_backwards, props_backwards) =
+                    self.reconstruct_path(came_from_target, prev_prop_from_target, &current_entity);
                 break;
             }
 
@@ -197,6 +210,11 @@ impl<'a> Pathfinder<'a> {
             let came_from = match direction {
                 Direction::FromSourceToTarget => &mut came_from_source,
                 Direction::FromTargetToSource => &mut came_from_target,
+            };
+
+            let prev_prop = match direction {
+                Direction::FromSourceToTarget => &mut prev_prop_from_source,
+                Direction::FromTargetToSource => &mut prev_prop_from_target,
             };
 
             let costs = match direction {
@@ -230,6 +248,7 @@ impl<'a> Pathfinder<'a> {
                     || tentative_costs < costs.get(&adjacent_entity).unwrap().to_owned()
                 {
                     came_from.insert(adjacent_entity.clone(), current_entity.to_owned());
+                    prev_prop.insert(adjacent_entity.clone(), "unknown".to_string());
                     costs.insert(adjacent_entity.clone(), tentative_costs);
 
                     if queue.get(&adjacent_entity) == None {
@@ -255,7 +274,12 @@ impl<'a> Pathfinder<'a> {
         } else {
             info!(
                 "A path was found: {}",
-                self.path_to_string(&found_path_forwards, &found_path_backwards)
+                self.path_to_string(
+                    &found_path_forwards,
+                    &found_path_backwards,
+                    &props_forwards,
+                    &props_backwards
+                )
             );
             debug!("Pathfinding score: {}", score);
         }
@@ -264,24 +288,31 @@ impl<'a> Pathfinder<'a> {
             found_path_forwards.clone(),
             found_path_backwards.clone(),
             score,
-            visited_entities.len()
+            visited_entities.len(),
         )
     }
 
     fn reconstruct_path<'c>(
         &self,
         came_from: HashMap<String, String>,
+        prev_prop: HashMap<String, String>,
         current_entity: &'c str,
-    ) -> Vec<String> {
+    ) -> (Vec<String>, Vec<String>) {
         let mut current_entity = current_entity;
         let mut path = vec![current_entity.to_string()];
+        let mut props: Vec<String> = vec![];
 
         while let Some(next) = came_from.get(current_entity) {
             current_entity = next;
             path.push(current_entity.to_string());
+
+            if prev_prop.get(current_entity).is_some() {
+                props.push(prev_prop.get(current_entity).unwrap().to_string())
+            }
         }
 
         path.reverse();
+        props.reverse();
 
         debug!(
             "reconstruct_path received current_entity {} and returned {}.",
@@ -289,7 +320,7 @@ impl<'a> Pathfinder<'a> {
             path.join(", ")
         );
 
-        path
+        (path, props)
     }
 
     // TODO Improve costs function; maybe take property quality into account?
@@ -379,37 +410,47 @@ impl<'a> Pathfinder<'a> {
         total_distance / path.len() as f64
     }
 
-    // Returns a pretty string representation of the forwards path.
-    // In case of a path with an intersection use the optional backwards path parameter.
+    // Returns a pretty string representation of the path.
     fn path_to_string(
         &self,
-        forwards_path: &Vec<String>,
-        backwards_path: &Option<Vec<String>>,
+        path_forwards: &Vec<String>,
+        path_backwards: &Vec<String>,
+        props_forwards: &Vec<String>,
+        props_backwards: &Vec<String>,
     ) -> String {
-        let mut fragment: Vec<String> = forwards_path
+        let mut path_string = format!(
+            "{} ({})",
+            path_forwards.first().unwrap().to_string(),
+            self.store_connector
+                .get_label(path_forwards.first().unwrap())
+        );
+
+        info!("{:?}", path_forwards);
+        info!("{:?}", path_backwards);
+        info!("{:?}", props_forwards);
+        info!("{:?}", props_backwards);
+
+        for (prop, entity) in props_forwards.iter().zip(path_forwards.iter()) {
+            path_string += &format!(
+                " -{}-> {} ({})",
+                prop,
+                entity,
+                self.store_connector.get_label(entity)
+            )
+        }
+
+        for (prop, entity) in props_backwards
+            .clone()
             .iter()
-            .map(|entity| format!("{} ({})", entity, self.store_connector.get_label(entity)))
-            .collect();
-
-        let mut path_string = fragment.join(" -> ");
-
-        if backwards_path.is_some() {
-            let mut the_backwards_path = backwards_path.as_ref().unwrap().clone();
-            the_backwards_path.pop();
-            the_backwards_path.reverse();
-
-            fragment = the_backwards_path
-                .iter()
-                .map(|entity| {
-                    format!(
-                        " <- {} ({})",
-                        entity,
-                        self.store_connector.get_label(entity)
-                    )
-                })
-                .collect();
-
-            path_string += &fragment.join("");
+            .rev()
+            .zip(path_backwards.clone().iter().rev())
+        {
+            path_string += &format!(
+                " <-{}- {} ({})",
+                prop,
+                entity,
+                self.store_connector.get_label(entity)
+            )
         }
 
         path_string

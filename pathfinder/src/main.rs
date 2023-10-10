@@ -282,8 +282,8 @@ fn benchmark(config: &toml::map::Map<String, toml::Value>) {
                 total_successes += 1;
                 collected_visited_entities.push(visited_entities);
 
-                let path_length = if found_path_backwards.is_some() {
-                    found_path_forwards.len() + found_path_backwards.unwrap().len() - 2
+                let path_length = if found_path_backwards.len() > 0 {
+                    found_path_forwards.len() + found_path_backwards.len() - 2
                 } else {
                     found_path_forwards.len() - 1
                 };
