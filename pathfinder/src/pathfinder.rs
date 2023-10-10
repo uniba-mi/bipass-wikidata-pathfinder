@@ -137,24 +137,18 @@ impl<'a> Pathfinder<'a> {
 
             visited_entities.insert(current_entity.clone());
 
-            // reconstruct path
-            let mut path = match direction {
-                Direction::FromSourceToTarget => {
-                    self.reconstruct_path(
-                        came_from_source.clone(),
-                        prev_prop_from_source.clone(),
-                        &current_entity,
-                    )
-                    .0
-                }
-                Direction::FromTargetToSource => {
-                    self.reconstruct_path(
-                        came_from_target.clone(),
-                        prev_prop_from_target.clone(),
-                        &current_entity,
-                    )
-                    .0
-                }
+            // construct path with newly added entity
+            let (path, props) = match direction {
+                Direction::FromSourceToTarget => self.reconstruct_path(
+                    came_from_source.clone(),
+                    prev_prop_from_source.clone(),
+                    &current_entity,
+                ),
+                Direction::FromTargetToSource => self.reconstruct_path(
+                    came_from_target.clone(),
+                    prev_prop_from_target.clone(),
+                    &current_entity,
+                ),
             };
 
             let empty_vec: Vec<String> = vec![];
@@ -174,23 +168,24 @@ impl<'a> Pathfinder<'a> {
             );
             debug!("{} entity/entities visited", visited_entities.len());
 
-            // path detection
+            // success detection
             // source -> target: check if the current entity equals the target
             if direction == Direction::FromSourceToTarget && current_entity == target_entity {
                 debug!("Direct path from source to target entity found.");
                 found_path_forwards = path;
+                props_forwards = props;
                 break;
             }
 
             // target -> source: check if the current entity equals the source
             if direction == Direction::FromTargetToSource && current_entity == source_entity {
                 debug!("Direct path from target to source entity found.");
-                path.reverse();
-                found_path_forwards = path;
+                found_path_backwards = path;
+                props_backwards = props;
                 break;
             }
 
-            // target -> intersecting <- source: check if the current entity is present in both came from mappings
+            // source -> intersecting <- target: check if the current entity is present in both came from mappings
             if came_from_source.contains_key(&current_entity)
                 && came_from_target.contains_key(&current_entity)
             {
@@ -206,7 +201,7 @@ impl<'a> Pathfinder<'a> {
                 break;
             }
 
-            // set mappings correctly depending on direction
+            // set mappings depending on direction
             let came_from = match direction {
                 Direction::FromSourceToTarget => &mut came_from_source,
                 Direction::FromTargetToSource => &mut came_from_target,
@@ -228,15 +223,17 @@ impl<'a> Pathfinder<'a> {
             };
 
             // insert adjacent entities into priority queue if they not have been visited before
-            for adjacent_entity in self.store_connector.get_adjacent_entities(&current_entity) {
+            for (prop, adjacent_entity) in self.store_connector.get_adjacent_entities(&current_entity) {
                 // cycle detection
                 if path.contains(&adjacent_entity.to_owned()) {
                     continue;
                 }
 
+                // construct candidate path
                 let mut candidate_path = path.clone();
                 candidate_path.push(adjacent_entity.clone());
 
+                // calculate costs of path
                 let tentative_costs = self.calculate_costs(
                     source_entity,
                     target_entity,
@@ -244,6 +241,7 @@ impl<'a> Pathfinder<'a> {
                     search_params,
                 );
 
+                // update mappings with respect to path costs and insert path in queue
                 if !costs.contains_key(&adjacent_entity)
                     || tentative_costs < costs.get(&adjacent_entity).unwrap().to_owned()
                 {
@@ -303,22 +301,21 @@ impl<'a> Pathfinder<'a> {
         let mut props: Vec<String> = vec![];
 
         while let Some(next) = came_from.get(current_entity) {
+            props.push(prev_prop.get(current_entity).unwrap().to_string());
             current_entity = next;
             path.push(current_entity.to_string());
-
-            if prev_prop.get(current_entity).is_some() {
-                props.push(prev_prop.get(current_entity).unwrap().to_string())
-            }
         }
 
         path.reverse();
         props.reverse();
 
         debug!(
-            "reconstruct_path received current_entity {} and returned {}.",
-            current_entity,
-            path.join(", ")
+            "reconstruct_path received current_entity {} and returned {:?} with props {:?}.",
+            current_entity, path, props
         );
+
+        // a path features n entities and exactly one property less
+        assert!(path.len() == props.len() + 1);
 
         (path, props)
     }
@@ -430,7 +427,7 @@ impl<'a> Pathfinder<'a> {
         info!("{:?}", props_forwards);
         info!("{:?}", props_backwards);
 
-        for (prop, entity) in props_forwards.iter().zip(path_forwards.iter()) {
+        for (prop, entity) in props_forwards.iter().zip(path_forwards.iter().skip(1)) {
             path_string += &format!(
                 " -{}-> {} ({})",
                 prop,
@@ -443,7 +440,7 @@ impl<'a> Pathfinder<'a> {
             .clone()
             .iter()
             .rev()
-            .zip(path_backwards.clone().iter().rev())
+            .zip(path_backwards.clone().iter().rev().skip(1))
         {
             path_string += &format!(
                 " <-{}- {} ({})",

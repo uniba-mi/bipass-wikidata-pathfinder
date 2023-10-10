@@ -1,9 +1,11 @@
+use std::vec;
+
 use bincode;
 use serde::{Deserialize, Serialize};
 use sled::{Batch, Db};
 
 use crate::api_connector::ApiConnector;
-use log::{debug, warn};
+use log::{debug, warn, info};
 
 #[derive(Serialize, Deserialize)]
 struct StoreValue {
@@ -49,7 +51,7 @@ impl<'a> StoreConnector<'a> {
 
     // Fetches the entities adjacent to the specified entity.
     // If the entity has not been seen before, its data and the data of the adjacent entities is fetched.
-    pub fn get_adjacent_entities(&self, entity: &str) -> Vec<String> {
+    pub fn get_adjacent_entities(&self, entity: &str) -> Vec<(String, String)> {
         if !self.label_mapping.contains_key(entity).unwrap()
             || !self.desc_mapping.contains_key(entity).unwrap()
             || !self.adjacency_list.contains_key(entity).unwrap()
@@ -59,16 +61,16 @@ impl<'a> StoreConnector<'a> {
 
             let mut batch = Batch::default();
 
-            // TODO predicates of the paths also have to be stored somehow
             // update the adjacency list for all retrieved entities
             for (some_entity, its_adjacent_entities) in adjacent_entities_data {
                 if !self.adjacency_list.contains_key(&some_entity).unwrap() {
                     let its_adjacent_entities_parsed = its_adjacent_entities.as_array().unwrap();
                     let cleaned_entities: Vec<String> = its_adjacent_entities_parsed
                         .iter()
-                        .map(|elem| elem.as_str().unwrap().split("-").last().unwrap().to_owned())
+                        .map(|elem| elem.as_str().unwrap().to_owned())
                         .collect();
 
+                    // a key is a single entity and the value is a vector with elements of this form: some_property-adjacent_entity
                     batch.insert(
                         some_entity.as_str(),
                         bincode::serialize(&cleaned_entities).unwrap(),
@@ -101,13 +103,23 @@ impl<'a> StoreConnector<'a> {
 
         // read from store
         let bytes = self.adjacency_list.get(entity).unwrap().unwrap();
-        let adjacent_entities: Vec<String> = bincode::deserialize(&bytes).unwrap();
+        let raw: Vec<String> = bincode::deserialize(&bytes).unwrap();
+
+        let mut adjacent_entities: Vec<(String, String)> = vec![];
+
+        for entry in raw {
+            let split: Vec<&str> = entry.split("-").collect();
+            adjacent_entities.push((split[0].to_string(), split[1].to_string()))
+        }
 
         debug!(
             "get_adjacent_entities received entity {} and returned {} entities.",
             entity,
             adjacent_entities.len()
         );
+
+        info!("{:?}", adjacent_entities);
+        exit()
 
         adjacent_entities
     }
