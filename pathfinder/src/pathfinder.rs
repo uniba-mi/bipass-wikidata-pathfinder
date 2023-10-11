@@ -31,7 +31,7 @@ impl<'a> Pathfinder<'a> {
         &self,
         source_entity: &str,
         target_entity: &str,
-        search_params: (f64, f64, f64),
+        hyperparameter_config: (f64, f64, f64),
     ) -> (Vec<String>, Vec<String>, f64, usize) {
         // initialize mappings and adjacency list based on source and target entity
         self.store_connector.get_adjacent_entities(source_entity);
@@ -43,9 +43,9 @@ impl<'a> Pathfinder<'a> {
             self.store_connector.get_label(source_entity),
             target_entity,
             self.store_connector.get_label(target_entity),
-            search_params.0,
-            search_params.1,
-            search_params.2
+            hyperparameter_config.0,
+            hyperparameter_config.1,
+            hyperparameter_config.2
         );
 
         // initialize set of visited entities that is used to check if entity limit is reached
@@ -71,7 +71,7 @@ impl<'a> Pathfinder<'a> {
                 source_entity,
                 target_entity,
                 vec![source_entity.to_string()],
-                search_params,
+                hyperparameter_config,
             ),
         );
 
@@ -94,7 +94,7 @@ impl<'a> Pathfinder<'a> {
                 source_entity,
                 target_entity,
                 vec![target_entity.to_string()],
-                search_params,
+                hyperparameter_config,
             ),
         );
 
@@ -154,7 +154,7 @@ impl<'a> Pathfinder<'a> {
 
             debug!(
                 "*** Processing path {} ({})",
-                self.print_path(&path, &empty_vec, &empty_vec, &empty_vec),
+                self.print_path(&path, &empty_vec, &props, &empty_vec),
                 if direction == Direction::FromSourceToTarget {
                     "source -> target"
                 } else {
@@ -163,7 +163,7 @@ impl<'a> Pathfinder<'a> {
             );
             debug!(
                 "Costs {} using alpha={}, beta={}, gamma={}",
-                costs, search_params.0, search_params.1, search_params.2
+                costs, hyperparameter_config.0, hyperparameter_config.1, hyperparameter_config.2
             );
             debug!("{} entity/entities visited", visited_entities.len());
 
@@ -240,7 +240,7 @@ impl<'a> Pathfinder<'a> {
                     source_entity,
                     target_entity,
                     candidate_path,
-                    search_params,
+                    hyperparameter_config,
                 );
 
                 // update mappings with respect to path costs and insert path in queue
@@ -267,7 +267,7 @@ impl<'a> Pathfinder<'a> {
         // the score of a pathfinder run (lower is better) equals the visited entities
         let mut score = visited_entities.len() as f64;
 
-        if found_path_forwards.is_empty() {
+        if found_path_forwards.is_empty() && found_path_backwards.is_empty() {
             info!("No path could be found. :(");
             // double the score to penalize no found path
             score *= 2.0;
@@ -330,12 +330,24 @@ impl<'a> Pathfinder<'a> {
         props_forwards: &Vec<String>,
         props_backwards: &Vec<String>,
     ) -> String {
-        let mut path_string = format!(
-            "{} ({})",
-            path_forwards.first().unwrap().to_string(),
-            self.store_connector
-                .get_label(path_forwards.first().unwrap())
-        );
+
+        let mut path_string;
+
+        if !path_forwards.is_empty() {
+            path_string = format!(
+                "{} ({})",
+                path_forwards.first().unwrap().to_string(),
+                self.store_connector
+                    .get_label(path_forwards.first().unwrap())
+            );
+        } else {
+            path_string = format!(
+                "{} ({})",
+                path_backwards.last().unwrap().to_string(),
+                self.store_connector
+                    .get_label(path_backwards.last().unwrap())
+            );
+        }
 
         for (prop, entity) in props_forwards.iter().zip(path_forwards.iter().skip(1)) {
             path_string += &format!(

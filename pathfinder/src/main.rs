@@ -11,6 +11,9 @@ use toml::Table;
 #[path = "./pathfinder.rs"]
 mod pathfinder;
 
+#[path = "./costs_calculator.rs"]
+mod costs_calculator;
+
 #[path = "./store_connector.rs"]
 mod store_connector;
 use crate::store_connector::StoreConnector;
@@ -19,15 +22,7 @@ use crate::store_connector::StoreConnector;
 mod api_connector;
 use crate::api_connector::ApiConnector;
 
-#[path = "./costs_calculator.rs"]
-mod costs_calculator;
-
 fn main() {
-    // initialize logger
-    env_logger::builder()
-        .filter_level(log::LevelFilter::Info)
-        .init();
-
     // load configuration
     let config_data: std::string::String =
         fs::read_to_string("./config.toml").expect("config.toml could not be read.");
@@ -36,17 +31,33 @@ fn main() {
 
     // read command line arguments
     let args: Vec<String> = env::args().collect();
-    let option = args
+
+    // parse the mode argument
+    let mode = args
         .get(1)
         .cloned()
         .unwrap_or_else(|| String::from("playground"));
 
-    // run corresponding function
-    match option.as_str() {
+    // parse the logger level argument
+    let logger_level = args.get(2).cloned().unwrap_or_else(|| String::from("info"));
+
+    // initialize logger based on specified logger level
+    match logger_level.as_str() {
+        "info" => env_logger::builder()
+            .filter_level(log::LevelFilter::Info)
+            .init(),
+        "debug" => env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .init(),
+        _ => panic!("Specified logger level is not supported."),
+    }
+
+    // run function corresponding to specified mode
+    match mode.as_str() {
         "playground" => playground(&config),
         "optimizer" => optimizer(&config),
         "benchmark" => benchmark(&config),
-        _ => panic!("This command line option is not supported."),
+        _ => panic!("Specified pathfinder mode is not supported."),
     }
 }
 
@@ -272,8 +283,12 @@ fn benchmark(config: &toml::map::Map<String, toml::Value>) {
             );
 
             // execute the pathfinding
-            let (found_path_forwards, found_path_backwards, _, visited_entities) =
-                pathfinder.find_path(source_entity, target_entity, hyperparameter_config.to_owned());
+            let (found_path_forwards, found_path_backwards, _, visited_entities) = pathfinder
+                .find_path(
+                    source_entity,
+                    target_entity,
+                    hyperparameter_config.to_owned(),
+                );
 
             // update results
             if found_path_forwards.is_empty() {
@@ -377,32 +392,23 @@ fn playground(config: &toml::map::Map<String, toml::Value>) {
     );
 
     let hyperparameter_config = (0.23031994047619048, 0.02808779761904762, 0.58984375);
-
-    // source -> target: path length 1
+    
     let mut entity_a = "Q42";
     let mut entity_b = "Q5";
 
     pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
-
-    // target -> source: path length 1
     pathfinder.find_path(entity_b, entity_a, hyperparameter_config);
 
-    // source -> intersecting <- target: path length 2
     entity_a = "Q42";
     entity_b = "Q762";
 
     pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
-
-    // target -> intersecting <- source: path length 2
     pathfinder.find_path(entity_b, entity_a, hyperparameter_config);
 
-    // source -> intersecting <- target: path length 3
     entity_a = "Q42";
     entity_b = "Q389908";
 
     pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
-
-    // target -> intersecting <- source: path length 3
     pathfinder.find_path(entity_b, entity_a, hyperparameter_config);
 
     // actual test query from derived query set

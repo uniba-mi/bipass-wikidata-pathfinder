@@ -8,10 +8,10 @@ pub fn calculate_costs(
     source_entity: &str,
     target_entity: &str,
     path: Vec<String>,
-    search_params: (f64, f64, f64),
+    hyperparameter_config: (f64, f64, f64),
 ) -> i64 {
     
-    let (alpha, beta, gamma) = search_params;
+    let (alpha, beta, gamma) = hyperparameter_config;
     let (g1, g2, h, costs);
 
     let directional_target_entity;

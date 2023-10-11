@@ -18,7 +18,7 @@ def query_wikidata(query):
 
     try:
         results = sparql_wrapper.query().convert()
-        sleep(3) # required to comply with Wikidata's rate limit policy
+        sleep(3) # required to comply with Wikidata's rate limit
     except Exception as e:
         print(f"An error occurred while querying Wikidata: {e}")
         results = {}
@@ -28,7 +28,7 @@ def query_wikidata(query):
 
 @app.route("/")
 def root():
-    return "Hello from the Wikidata API."
+    return "Hello from the wikidata_api!"
 
 
 @app.route("/adjacent_entities", methods=["GET"])
@@ -54,18 +54,13 @@ def adjacent_entities():
 
             $object_id rdfs:label $the_object_label .
             FILTER ( lang($the_object_label) = "en" ) .
-            FILTER ( !CONTAINS ( $the_object_label, "Wiki" ) ) .
-            FILTER REGEX ( $the_object_label, "^[A-z0-9 -]+$$" ) .
 
             $object_id schema:description $the_object_description .
             FILTER ( lang($the_object_description) = "en" ) .
-            FILTER ( !CONTAINS ( $the_object_description, "Wiki" ) ) .
 
             $foo wikibase:directClaim $predicate_id .
             $foo rdfs:label $the_predicate_label.
-            FILTER ( lang($the_predicate_label) = "en" ) .
-            FILTER ( !CONTAINS ( $the_predicate_label, "Wiki" ) ) .
-            FILTER ( $predicate_id != wdt:P1343 ) .""")
+            FILTER ( lang($the_predicate_label) = "en" ) .""")
 
         initial_where_block_content = where_block_template.substitute(
             subject_id="$subject_id0",
