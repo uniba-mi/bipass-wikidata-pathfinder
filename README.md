@@ -43,7 +43,7 @@ To run the Query Factory proceed as follows:
 
 ## Dual-Entity Query Dataset
 
-The derived dual-entity query dataset can be found [here](./data/wikidata_queries_10000_topics_genre.csv). It uses the CSV format; the columns have the following meaning:
+The dual-entity query dataset derived using the Query Factory can be found [here](./data/wikidata_queries_10000_topics_genre.csv). It uses the CSV format; the columns have the following meaning:
 
 - wikidata_id_a: The Wikidata ID of the first entity of the query
 - wikidata_id_b: The Wikidata ID of the second entity of the query
@@ -51,7 +51,7 @@ The derived dual-entity query dataset can be found [here](./data/wikidata_querie
 
 ## Pathfinding System
 
-This artifact actually comprises three components that implement the pathfinding. The Pathfinder component contains the actual pathfinding algorithm and interacts with two API over HTTP: To issue queries on Wikidata, it interacts with the Wikidata API component and, to calculate the semantic distances between entities, it interacts with the Wembed API.
+This artifact actually comprises three components that implement the pathfinding. The pathfinder component contains the actual pathfinding algorithm and interacts with two API over HTTP: To issue queries on Wikidata, it interacts with the wikidata_api and, to calculate semantic distances between entities, it interacts with the wembed_api.
 
 ### Usage
 
@@ -63,6 +63,8 @@ To run the Pathfinding System proceed as follows:
     1. Run `cargo run -- playground` to launch the pathfinder on a few example queries.
     2. Run `cargo run -- optimizer` to run the optimizer for fitting the search parameters alpha, beta, and gamma. Warning: This will overwrite the already present [optimizer results file](./data/optimizer_results.csv).
     3. Run `cargo run -- benchmark` to run the benchmark. Warning: This will overwrite the already present [benchmark results files](./data/).
+
+To activate the debugging logger level, add the `debug` flag to one of the commands from 3.1, 3.2, and 3.3. For example `cargo run -- playground debug` runs the pathfinder with verbose logging.
 
 ## License
 
