@@ -19,6 +19,9 @@ use crate::store_connector::StoreConnector;
 mod api_connector;
 use crate::api_connector::ApiConnector;
 
+#[path = "./costs_calculator.rs"]
+mod costs_calculator;
+
 fn main() {
     // initialize logger
     env_logger::builder()
@@ -66,7 +69,6 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
     // create Pathfinder instance
     let pathfinder = pathfinder::Pathfinder::new(
         &store_connector,
-        String::from(config["distance_method"].as_str().unwrap()),
         config["entity_limit"].as_integer().unwrap() as usize,
     );
 
@@ -117,7 +119,7 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
     // the function to be optimized
     let f = |hyperparameter_config: &[f64]| {
         // to collect the scores of the individual pathfinder runs
-        let mut collected_scores: Vec<f64> = Vec::new();
+        let mut scores: Vec<f64> = Vec::new();
 
         // iterate sample queries
         for query in &some_queries {
@@ -139,7 +141,7 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
                 ),
             );
 
-            collected_scores.push(score);
+            scores.push(score);
         }
 
         let mut file = OpenOptions::new()
@@ -149,7 +151,7 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
             .unwrap();
 
         // calculate, store, and return the average number of visited entities
-        let objective_value = Statistics::mean(collected_scores);
+        let objective_value = Statistics::mean(scores);
 
         writeln!(
             file,
@@ -200,7 +202,6 @@ fn benchmark(config: &toml::map::Map<String, toml::Value>) {
     // create Pathfinder instance
     let pathfinder = pathfinder::Pathfinder::new(
         &store_connector,
-        String::from(config["distance_method"].as_str().unwrap()),
         config["entity_limit"].as_integer().unwrap() as usize,
     );
 
@@ -372,7 +373,6 @@ fn playground(config: &toml::map::Map<String, toml::Value>) {
     // create Pathfinder instance
     let pathfinder = pathfinder::Pathfinder::new(
         &store_connector,
-        String::from(config["distance_method"].as_str().unwrap()),
         config["entity_limit"].as_integer().unwrap() as usize,
     );
 

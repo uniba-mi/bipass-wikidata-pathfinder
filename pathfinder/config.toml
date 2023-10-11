@@ -2,7 +2,6 @@ desc_mapping_path = "../data/desc_mapping"
 label_mapping_path = "../data/label_mapping"
 distance_mapping_path = "../data/distance_mapping"
 adjacency_list_path = "../data/adjacency_list"
-distance_method = "labels_descriptions"
 entity_limit = 100
 wembed_api = "http://127.0.0.1:5001/distance"
 wikidata_api = "http://127.0.0.1:5000"

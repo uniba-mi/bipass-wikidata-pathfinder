@@ -5,7 +5,7 @@ use sled::{Batch, Db};
 use crate::api_connector::ApiConnector;
 use log::{debug, warn};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct StoreValue {
     data: Vec<String>,
 }
@@ -147,41 +147,19 @@ impl<'a> StoreConnector<'a> {
         label
     }
 
-    pub fn get_semantic_distance(
-        &self,
-        entity_a: &str,
-        entity_b: &str,
-        distance_method: &str,
-    ) -> f64 {
-        let string_a: String;
-        let string_b: String;
-
-        match distance_method {
-            "labels" => {
-                string_a = format!("{}", self.get_label(entity_a));
-                string_b = format!("{}", self.get_label(entity_b));
-            }
-            "descriptions" => {
-                string_a = format!("{}", self.get_description(entity_a));
-                string_b = format!("{}", self.get_description(entity_b));
-            }
-            "labels_descriptions" => {
-                string_a = format!(
-                    "{} {}",
-                    self.get_label(entity_a),
-                    self.get_description(entity_a)
-                );
-                string_b = format!(
-                    "{} {}",
-                    self.get_label(entity_b),
-                    self.get_description(entity_b)
-                );
-            }
-            _ => {
-                string_a = format!("{}", self.get_label(entity_a));
-                string_b = format!("{}", self.get_label(entity_b));
-            }
-        }
+    // semantic distance is calculated using both entity labels and descriptions
+    // the descriptions mitigate ambiguity in entity labels
+    pub fn get_semantic_distance(&self, entity_a: &str, entity_b: &str) -> f64 {
+        let string_a = format!(
+            "{} {}",
+            self.get_label(entity_a),
+            self.get_description(entity_a)
+        );
+        let string_b = format!(
+            "{} {}",
+            self.get_label(entity_b),
+            self.get_description(entity_b)
+        );
 
         let combined_string = format!("{}&{}", string_a, string_b);
 
