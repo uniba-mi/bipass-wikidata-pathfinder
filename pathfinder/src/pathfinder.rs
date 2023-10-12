@@ -61,16 +61,7 @@ impl<'a> Pathfinder<'a> {
         let mut queue_from_source: DoublePriorityQueue<String, i64> = DoublePriorityQueue::new();
 
         // push source entity into priority queue
-        costs_from_source.insert(
-            source_entity.to_owned(),
-            calculate_costs(
-                self.store_connector,
-                source_entity,
-                target_entity,
-                &vec![source_entity.to_string()],
-                hyperparameter_config,
-            ),
-        );
+        costs_from_source.insert(source_entity.to_owned(), 0);
 
         queue_from_source.push(
             source_entity.to_owned(),
@@ -84,16 +75,7 @@ impl<'a> Pathfinder<'a> {
         let mut queue_from_target: DoublePriorityQueue<String, i64> = DoublePriorityQueue::new();
 
         // push target entity into priority queue
-        costs_from_target.insert(
-            target_entity.to_owned(),
-            calculate_costs(
-                self.store_connector,
-                source_entity,
-                target_entity,
-                &vec![source_entity.to_string()],
-                hyperparameter_config,
-            ),
-        );
+        costs_from_target.insert(target_entity.to_owned(), 0);
 
         queue_from_target.push(
             target_entity.to_owned(),
@@ -234,6 +216,9 @@ impl<'a> Pathfinder<'a> {
                 // construct new candidate path
                 let mut candidate_path = path.clone();
                 candidate_path.push(adjacent_entity.clone());
+                
+                let mut candidate_props = path.clone();
+                candidate_props.push(prop.clone());
 
                 // calculate costs of path
                 let tentative_costs = calculate_costs(
@@ -241,6 +226,7 @@ impl<'a> Pathfinder<'a> {
                     source_entity,
                     target_entity,
                     &candidate_path,
+                    &candidate_props,
                     hyperparameter_config,
                 );
 

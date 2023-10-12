@@ -9,6 +9,7 @@ RUN rm /usr/lib/python3.11/EXTERNALLY-MANAGED
 RUN pip install -U SPARQLWrapper
 RUN pip install -U requests
 RUN pip install -U flask
+RUN pip install -U beautifulsoup4
 
 WORKDIR /wikidata_api
 

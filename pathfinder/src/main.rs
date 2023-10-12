@@ -1,5 +1,6 @@
 use env_logger;
 use log::info;
+use pathfinder::Pathfinder;
 use simplers_optimization::Optimizer;
 use statrs::statistics::Statistics;
 use std::env;
@@ -33,16 +34,10 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     // parse the mode argument
-    let mode = args
-        .get(1)
-        .cloned()
-        .unwrap_or_else(|| "playground".to_string());
+    let mode = args.get(1).cloned().unwrap_or("playground".to_string());
 
     // parse the logger level argument
-    let logger_level = args
-    .get(2)
-    .cloned()
-    .unwrap_or_else(|| "info".to_string());
+    let logger_level = args.get(2).cloned().unwrap_or("info".to_string());
 
     // initialize logger based on specified logger level
     match logger_level.as_str() {
@@ -55,16 +50,6 @@ fn main() {
         _ => panic!("Specified logger level is not supported."),
     }
 
-    // run function corresponding to specified mode
-    match mode.as_str() {
-        "playground" => playground(&config),
-        "optimizer" => optimizer(&config),
-        "benchmark" => benchmark(&config),
-        _ => panic!("Specified pathfinder mode is not supported."),
-    }
-}
-
-fn optimizer(config: &toml::map::Map<String, toml::Value>) {
     // create ApiConnector instance
     let api_connector: ApiConnector = api_connector::ApiConnector::new(
         String::from(config["wembed_api"].as_str().unwrap()),
@@ -86,6 +71,16 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
         config["entity_limit"].as_integer().unwrap() as usize,
     );
 
+    // run function corresponding to specified mode
+    match mode.as_str() {
+        "playground" => playground(&pathfinder),
+        "optimizer" => optimizer(&config, &pathfinder),
+        "benchmark" => benchmark(&config, &pathfinder),
+        _ => panic!("Specified pathfinder mode is not supported."),
+    }
+}
+
+fn optimizer(config: &toml::map::Map<String, toml::Value>, pathfinder: &Pathfinder) {
     // collect sample queries for the optimization from the Wikidata query files
     let query_file_paths = config["query_file_paths"]
         .as_array()
@@ -206,28 +201,7 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
     println!("{}", results_string);
 }
 
-fn benchmark(config: &toml::map::Map<String, toml::Value>) {
-    // create ApiConnector instance
-    let api_connector: ApiConnector = api_connector::ApiConnector::new(
-        String::from(config["wembed_api"].as_str().unwrap()),
-        String::from(config["wikidata_api"].as_str().unwrap()),
-    );
-
-    // create StoreConnector instance
-    let store_connector: StoreConnector = store_connector::StoreConnector::new(
-        &api_connector,
-        String::from(config["label_mapping_path"].as_str().unwrap()),
-        String::from(config["desc_mapping_path"].as_str().unwrap()),
-        String::from(config["distance_mapping_path"].as_str().unwrap()),
-        String::from(config["adjacency_list_path"].as_str().unwrap()),
-    );
-
-    // create Pathfinder instance
-    let pathfinder = pathfinder::Pathfinder::new(
-        &store_connector,
-        config["entity_limit"].as_integer().unwrap() as usize,
-    );
-
+fn benchmark(config: &toml::map::Map<String, toml::Value>, pathfinder: &Pathfinder) {
     // create configurations for benchmarking
     let benchmark_configs = vec![
         &(0.6991370827362581, 0.10886217551256613, 0.822998046875), // optimized
@@ -377,28 +351,7 @@ path_lengths_entities = {}
     }
 }
 
-fn playground(config: &toml::map::Map<String, toml::Value>) {
-    // create ApiConnector instance
-    let api_connector: ApiConnector = api_connector::ApiConnector::new(
-        String::from(config["wembed_api"].as_str().unwrap()),
-        String::from(config["wikidata_api"].as_str().unwrap()),
-    );
-
-    // create StoreConnector instance
-    let store_connector: StoreConnector = store_connector::StoreConnector::new(
-        &api_connector,
-        String::from(config["label_mapping_path"].as_str().unwrap()),
-        String::from(config["desc_mapping_path"].as_str().unwrap()),
-        String::from(config["distance_mapping_path"].as_str().unwrap()),
-        String::from(config["adjacency_list_path"].as_str().unwrap()),
-    );
-
-    // create Pathfinder instance
-    let pathfinder = pathfinder::Pathfinder::new(
-        &store_connector,
-        config["entity_limit"].as_integer().unwrap() as usize,
-    );
-
+fn playground(pathfinder: &Pathfinder) {
     let hyperparameter_config = &(0.23031994047619048, 0.02808779761904762, 0.58984375);
 
     let mut entity_a = "Q42";
@@ -407,8 +360,8 @@ fn playground(config: &toml::map::Map<String, toml::Value>) {
     pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
     pathfinder.find_path(entity_b, entity_a, hyperparameter_config);
 
-    entity_a = "Q42";
-    entity_b = "Q762";
+    entity_a = "Q3936";
+    entity_b = "Q21198";
 
     pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
     pathfinder.find_path(entity_b, entity_a, hyperparameter_config);

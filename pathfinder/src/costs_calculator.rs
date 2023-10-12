@@ -8,6 +8,7 @@ pub fn calculate_costs(
     source_entity: &str,
     target_entity: &str,
     path: &Vec<String>,
+    props: &Vec<String>,
     hyperparameter_config: &(f64, f64, f64),
 ) -> i64 {
     
@@ -26,17 +27,17 @@ pub fn calculate_costs(
     }
 
     // get a slice of all entities except the last entity on the path
-    let path_so_far = &path[0..path.len() - 1];
+    let path_except_last = &path[0..path.len() - 1];
 
-    // calculate average semantic distance of path so far to target entity
-    if *alpha == 0.0 || path_so_far.is_empty() {
+    // calculate average semantic distance of path to target entity except the last
+    if *alpha == 0.0 || path_except_last.is_empty() {
         g1 = 0.0;
     } else {
-        let total_distance: f64 = path.iter().fold(0.0, |acc, e| {
+        let total_distance: f64 = path_except_last.iter().fold(0.0, |acc, e| {
             acc + store_connector.get_semantic_distance(e, directional_target_entity)
         });
         
-        let average_distance = total_distance / path.len() as f64;
+        let average_distance = total_distance / path_except_last.len() as f64;
 
         g1 = alpha * average_distance;
     }
