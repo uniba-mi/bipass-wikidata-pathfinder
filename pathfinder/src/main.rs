@@ -36,10 +36,13 @@ fn main() {
     let mode = args
         .get(1)
         .cloned()
-        .unwrap_or_else(|| String::from("playground"));
+        .unwrap_or_else(|| "playground".to_string());
 
     // parse the logger level argument
-    let logger_level = args.get(2).cloned().unwrap_or_else(|| String::from("info"));
+    let logger_level = args
+    .get(2)
+    .cloned()
+    .unwrap_or_else(|| "info".to_string());
 
     // initialize logger based on specified logger level
     match logger_level.as_str() {
@@ -142,15 +145,24 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
             );
 
             // find a path given the provided configuration
-            let (_, _, score, _) = pathfinder.find_path(
-                source_entity,
-                target_entity,
-                &(
-                    hyperparameter_config[0],
-                    hyperparameter_config[1],
-                    hyperparameter_config[2],
-                ),
-            );
+            let (found_path_forwards, found_path_backwards, visited_entity_count) = pathfinder
+                .find_path(
+                    source_entity,
+                    target_entity,
+                    &(
+                        hyperparameter_config[0],
+                        hyperparameter_config[1],
+                        hyperparameter_config[2],
+                    ),
+                );
+
+            // the score of a pathfinder run (lower is better) equals the visited entities
+            let mut score = visited_entity_count as f64;
+
+            // double the score to penalize no found path
+            if found_path_forwards.is_empty() && found_path_backwards.is_empty() {
+                score *= 2.0;
+            }
 
             scores.push(score);
         }
@@ -270,7 +282,7 @@ fn benchmark(config: &toml::map::Map<String, toml::Value>) {
     for hyperparameter_config in benchmark_configs {
         // create variables for storing benchmark results
         let mut total_successes = 0;
-        let mut collected_visited_entities: Vec<usize> = vec![];
+        let mut collected_counts: Vec<usize> = vec![];
         let mut collected_path_lengths: Vec<usize> = vec![];
 
         // run pathfinder for test queries
@@ -283,20 +295,16 @@ fn benchmark(config: &toml::map::Map<String, toml::Value>) {
             );
 
             // execute the pathfinding
-            let (found_path_forwards, found_path_backwards, _, visited_entities) = pathfinder
-                .find_path(
-                    source_entity,
-                    target_entity,
-                    hyperparameter_config,
-                );
+            let (found_path_forwards, found_path_backwards, visited_entity_count) =
+                pathfinder.find_path(source_entity, target_entity, hyperparameter_config);
 
             // update results
             if found_path_forwards.is_empty() {
-                collected_visited_entities.push(0);
+                collected_counts.push(0);
                 collected_path_lengths.push(0);
             } else {
                 total_successes += 1;
-                collected_visited_entities.push(visited_entities);
+                collected_counts.push(visited_entity_count);
 
                 let path_length = if found_path_backwards.len() > 0 {
                     found_path_forwards.len() + found_path_backwards.len() - 2
@@ -311,7 +319,7 @@ fn benchmark(config: &toml::map::Map<String, toml::Value>) {
         let success_rate: f32 = total_successes as f32 / some_queries.len() as f32;
 
         // calculate average visited entities for successful cases
-        let visited_entities_cleaned: Vec<f32> = collected_visited_entities
+        let visited_entities_cleaned: Vec<f32> = collected_counts
             .iter()
             .map(|n| *n as f32)
             .filter(|n| n.to_owned() > 0.0)
@@ -392,7 +400,7 @@ fn playground(config: &toml::map::Map<String, toml::Value>) {
     );
 
     let hyperparameter_config = &(0.23031994047619048, 0.02808779761904762, 0.58984375);
-    
+
     let mut entity_a = "Q42";
     let mut entity_b = "Q5";
 

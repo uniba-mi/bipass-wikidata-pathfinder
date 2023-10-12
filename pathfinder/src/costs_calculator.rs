@@ -61,23 +61,23 @@ pub fn calculate_costs(
 
     costs = g1 + g2 + h;
 
-    // costs cannot be negative
+    // costs must not be negative
     assert!(costs >= 0.0);
 
+    // due to the following workaround the costs must not exceed 100_000
+    assert!(costs < 99_999.0);
+
     // workaround required because priority_queue crate only accepts integer costs
-    // first an offset is added such that all costs start with a leading 1
-    let offset_costs = costs + 1.0;
+    // first an offset is added to "embed" the costs float
+    let offset_costs = costs + 100_000.000_001;
 
-    // the float is interpreted as its mantissa by removing the dot
-    // also, the costs are limited to 10 places such that correct order is retained
-    let mut clean_costs_string = offset_costs.to_string().replace(".", "");
-    if clean_costs_string.len() < 10 {
-        let missing = "0".repeat(10 - clean_costs_string.len());
-        clean_costs_string += &missing;
-    }
-    let integer_const: i64 = clean_costs_string[..10].parse().unwrap();
+    // next, the dot is removed
+    let clean_costs_string = offset_costs.to_string().replace(".", "");
 
-    assert!(integer_const >= 1000000000);
+    // then, the costs are cut off after 12 places such that correct order is retained
+    let integer_const: i64 = clean_costs_string[..12].parse().unwrap();
+
+    assert!(integer_const >= 100_000_000_000);
 
     return integer_const;
 }

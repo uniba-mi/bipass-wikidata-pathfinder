@@ -1,5 +1,5 @@
 use log::{debug, info};
-use priority_queue::DoublePriorityQueue;
+use priority_queue::DoublePriorityQueue; // allows to extract minimum in contrast to PriorityQueue
 use std::collections::{HashMap, HashSet};
 
 use crate::costs_calculator::calculate_costs;
@@ -29,7 +29,7 @@ impl<'a> Pathfinder<'a> {
         source_entity: &str,
         target_entity: &str,
         hyperparameter_config: &(f64, f64, f64),
-    ) -> (Vec<String>, Vec<String>, f64, usize) {
+    ) -> (Vec<String>, Vec<String>, usize) {
         // initialize mappings and adjacency list based on source and target entity
         self.store_connector.get_adjacent_entities(source_entity);
         self.store_connector.get_adjacent_entities(target_entity);
@@ -103,11 +103,9 @@ impl<'a> Pathfinder<'a> {
         while !(queue_from_source.is_empty() && queue_from_target.is_empty())
             && visited_entities.len() < self.entity_limit
         {
-            let current_entity;
-            let costs;
-
-            // states wether currently observed path is from source to target (st) or from target to source (ts)
-            let direction;
+            let current_entity; // the entity currently being visited
+            let costs; // the costs of the path leading to the current entity
+            let direction; // the direction of the path
 
             // find the entity with the least costly associated path in both queues
             // case 1: both queues are not empty
@@ -136,13 +134,13 @@ impl<'a> Pathfinder<'a> {
             // construct path with newly added entity
             let (path, props) = match direction {
                 Direction::FromSourceToTarget => self.reconstruct_path(
-                    came_from_source.clone(),
-                    prev_prop_from_source.clone(),
+                    &came_from_source,
+                    &prev_prop_from_source,
                     &current_entity,
                 ),
                 Direction::FromTargetToSource => self.reconstruct_path(
-                    came_from_target.clone(),
-                    prev_prop_from_target.clone(),
+                    &came_from_target,
+                    &prev_prop_from_target,
                     &current_entity,
                 ),
             };
@@ -190,10 +188,16 @@ impl<'a> Pathfinder<'a> {
                     current_entity
                 );
 
-                (found_path_forwards, props_forwards) =
-                    self.reconstruct_path(came_from_source, prev_prop_from_source, &current_entity);
-                (found_path_backwards, props_backwards) =
-                    self.reconstruct_path(came_from_target, prev_prop_from_target, &current_entity);
+                (found_path_forwards, props_forwards) = self.reconstruct_path(
+                    &came_from_source,
+                    &prev_prop_from_source,
+                    &current_entity,
+                );
+                (found_path_backwards, props_backwards) = self.reconstruct_path(
+                    &came_from_target,
+                    &prev_prop_from_target,
+                    &current_entity,
+                );
                 break;
             }
 
@@ -260,13 +264,8 @@ impl<'a> Pathfinder<'a> {
             );
         }
 
-        // the score of a pathfinder run (lower is better) equals the visited entities
-        let mut score = visited_entities.len() as f64;
-
         if found_path_forwards.is_empty() && found_path_backwards.is_empty() {
             info!("No path could be found. :(");
-            // double the score to penalize no found path
-            score *= 2.0;
         } else {
             info!(
                 "A path was found: {}",
@@ -277,21 +276,19 @@ impl<'a> Pathfinder<'a> {
                     &props_backwards
                 )
             );
-            debug!("Pathfinding score: {}", score);
         }
 
         (
-            found_path_forwards.clone(),
-            found_path_backwards.clone(),
-            score,
+            found_path_forwards,
+            found_path_backwards,
             visited_entities.len(),
         )
     }
 
     fn reconstruct_path<'c>(
         &self,
-        came_from: HashMap<String, String>,
-        prev_prop: HashMap<String, String>,
+        came_from: &HashMap<String, String>,
+        prev_prop: &HashMap<String, String>,
         current_entity: &'c str,
     ) -> (Vec<String>, Vec<String>) {
         let mut current_entity = current_entity;
@@ -331,14 +328,14 @@ impl<'a> Pathfinder<'a> {
         if !path_forwards.is_empty() {
             path_string = format!(
                 "{} ({})",
-                path_forwards.first().unwrap().to_string(),
+                path_forwards.first().unwrap(),
                 self.store_connector
                     .get_label(path_forwards.first().unwrap())
             );
         } else {
             path_string = format!(
                 "{} ({})",
-                path_backwards.last().unwrap().to_string(),
+                path_backwards.last().unwrap(),
                 self.store_connector
                     .get_label(path_backwards.last().unwrap())
             );
@@ -355,10 +352,9 @@ impl<'a> Pathfinder<'a> {
         }
 
         for (prop, entity) in props_backwards
-            .clone()
             .iter()
             .rev()
-            .zip(path_backwards.clone().iter().rev().skip(1))
+            .zip(path_backwards.iter().rev().skip(1))
         {
             path_string += &format!(
                 " <-{} ({})- {} ({})",
