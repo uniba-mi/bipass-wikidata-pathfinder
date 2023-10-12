@@ -145,7 +145,7 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
             let (_, _, score, _) = pathfinder.find_path(
                 source_entity,
                 target_entity,
-                (
+                &(
                     hyperparameter_config[0],
                     hyperparameter_config[1],
                     hyperparameter_config[2],
@@ -287,7 +287,7 @@ fn benchmark(config: &toml::map::Map<String, toml::Value>) {
                 .find_path(
                     source_entity,
                     target_entity,
-                    hyperparameter_config.to_owned(),
+                    hyperparameter_config,
                 );
 
             // update results
@@ -391,7 +391,7 @@ fn playground(config: &toml::map::Map<String, toml::Value>) {
         config["entity_limit"].as_integer().unwrap() as usize,
     );
 
-    let hyperparameter_config = (0.23031994047619048, 0.02808779761904762, 0.58984375);
+    let hyperparameter_config = &(0.23031994047619048, 0.02808779761904762, 0.58984375);
     
     let mut entity_a = "Q42";
     let mut entity_b = "Q5";

@@ -16,10 +16,7 @@ pub struct Pathfinder<'a> {
 }
 
 impl<'a> Pathfinder<'a> {
-    pub fn new(
-        store_connector: &'a StoreConnector<'a>,
-        entity_limit: usize,
-    ) -> Self {
+    pub fn new(store_connector: &'a StoreConnector<'a>, entity_limit: usize) -> Self {
         // create Pathfinder instance with struct fields
         Self {
             store_connector,
@@ -31,7 +28,7 @@ impl<'a> Pathfinder<'a> {
         &self,
         source_entity: &str,
         target_entity: &str,
-        hyperparameter_config: (f64, f64, f64),
+        hyperparameter_config: &(f64, f64, f64),
     ) -> (Vec<String>, Vec<String>, f64, usize) {
         // initialize mappings and adjacency list based on source and target entity
         self.store_connector.get_adjacent_entities(source_entity);
@@ -70,7 +67,7 @@ impl<'a> Pathfinder<'a> {
                 self.store_connector,
                 source_entity,
                 target_entity,
-                vec![source_entity.to_string()],
+                &vec![source_entity.to_string()],
                 hyperparameter_config,
             ),
         );
@@ -93,7 +90,7 @@ impl<'a> Pathfinder<'a> {
                 self.store_connector,
                 source_entity,
                 target_entity,
-                vec![target_entity.to_string()],
+                &vec![source_entity.to_string()],
                 hyperparameter_config,
             ),
         );
@@ -226,11 +223,11 @@ impl<'a> Pathfinder<'a> {
                 self.store_connector.get_adjacent_entities(&current_entity)
             {
                 // cycle detection
-                if path.contains(&adjacent_entity.to_owned()) {
+                if path.contains(&adjacent_entity) {
                     continue;
                 }
 
-                // construct candidate path
+                // construct new candidate path
                 let mut candidate_path = path.clone();
                 candidate_path.push(adjacent_entity.clone());
 
@@ -239,11 +236,11 @@ impl<'a> Pathfinder<'a> {
                     self.store_connector,
                     source_entity,
                     target_entity,
-                    candidate_path,
+                    &candidate_path,
                     hyperparameter_config,
                 );
 
-                // update mappings with respect to path costs and insert path in queue
+                // update mappings with respect to path costs
                 if !costs.contains_key(&adjacent_entity)
                     || tentative_costs < costs.get(&adjacent_entity).unwrap().to_owned()
                 {
@@ -251,9 +248,8 @@ impl<'a> Pathfinder<'a> {
                     prev_prop.insert(adjacent_entity.clone(), prop);
                     costs.insert(adjacent_entity.clone(), tentative_costs);
 
-                    if queue.get(&adjacent_entity) == None {
-                        queue.push(adjacent_entity, tentative_costs);
-                    }
+                    // insert adjacent entity in queue; update to lower costs if entity is already present
+                    queue.push_decrease(adjacent_entity, tentative_costs);
                 }
             }
 
@@ -330,7 +326,6 @@ impl<'a> Pathfinder<'a> {
         props_forwards: &Vec<String>,
         props_backwards: &Vec<String>,
     ) -> String {
-
         let mut path_string;
 
         if !path_forwards.is_empty() {

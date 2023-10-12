@@ -7,8 +7,8 @@ pub fn calculate_costs(
     store_connector: &StoreConnector,
     source_entity: &str,
     target_entity: &str,
-    path: Vec<String>,
-    hyperparameter_config: (f64, f64, f64),
+    path: &Vec<String>,
+    hyperparameter_config: &(f64, f64, f64),
 ) -> i64 {
     
     let (alpha, beta, gamma) = hyperparameter_config;
@@ -29,7 +29,7 @@ pub fn calculate_costs(
     let path_so_far = &path[0..path.len() - 1];
 
     // calculate average semantic distance of path so far to target entity
-    if alpha == 0.0 || path_so_far.is_empty() {
+    if *alpha == 0.0 || path_so_far.is_empty() {
         g1 = 0.0;
     } else {
         let total_distance: f64 = path.iter().fold(0.0, |acc, e| {
@@ -42,14 +42,14 @@ pub fn calculate_costs(
     }
 
     // length of path
-    if beta == 0.0 {
+    if *beta == 0.0 {
         g2 = 0.0;
     } else {
         g2 = beta * (path.len() - 1) as f64;
     }
 
     // semantic distance between last path entity and target entity
-    if gamma == 0.0 {
+    if *gamma == 0.0 {
         h = 0.0;
     } else {
         h = gamma
