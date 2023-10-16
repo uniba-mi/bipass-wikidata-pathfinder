@@ -62,6 +62,8 @@ pub fn calculate_costs(
 
     costs = g1 + g2 + h;
 
+    // TODO take specificity of properties into account
+
     // costs must not be negative
     assert!(costs >= 0.0);
 

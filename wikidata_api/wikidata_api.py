@@ -4,12 +4,26 @@ from time import sleep
 from string import Template
 from flask import Flask, jsonify, request
 from SPARQLWrapper import SPARQLWrapper, JSON
+import csv
 
 
 app = Flask(__name__)
 endpoint_url = "https://query.wikidata.org/sparql"
 sparql_wrapper = SPARQLWrapper(
     endpoint_url, agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36")
+
+
+# read property stats from file
+with open("wd_properties.csv", newline="", ) as csvfile:
+    csv_reader = csv.reader(csvfile, delimiter=",")
+    
+    # skip header line
+    next(csv_reader)
+
+    prop_frequency_dict = {}
+
+    for prop, frequency in csv_reader:
+        prop_frequency_dict[prop] = int(frequency)
 
 
 def query_wikidata(query):
@@ -233,6 +247,17 @@ def id():
     
     return id
 
+
+@app.route("/prop_frequencies", methods=["GET"])
+def prop_frequencies():
+    props = request.args.get("props").split("-")
+    max_frequency = max(prop_frequency_dict.values())
+
+    relevant_entries = dict(filter(lambda p: p[0] in props, prop_frequency_dict.items()))
+    frequencies = [frequency / max_frequency for _, frequency in relevant_entries.items()]
+
+    return frequencies if frequencies else []
+    
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0")
