@@ -1,6 +1,7 @@
 use log::{debug, info};
 use priority_queue::DoublePriorityQueue; // allows to extract minimum in contrast to PriorityQueue
 use std::collections::{HashMap, HashSet};
+use std::io;
 
 use crate::costs_calculator::calculate_costs;
 use crate::store_connector::StoreConnector;
@@ -131,7 +132,8 @@ impl<'a> Pathfinder<'a> {
 
             debug!(
                 "*** Processing path {} ({})",
-                self.print_path(&path, &empty_vec, &props, &empty_vec),
+                self.path_to_string(&path, &empty_vec, &props, &empty_vec)
+                    .unwrap(),
                 if direction == Direction::FromSourceToTarget {
                     "source -> target"
                 } else {
@@ -216,7 +218,7 @@ impl<'a> Pathfinder<'a> {
                 // construct new candidate path
                 let mut candidate_path = path.clone();
                 candidate_path.push(adjacent_entity.clone());
-                
+
                 let mut candidate_props = path.clone();
                 candidate_props.push(prop.clone());
 
@@ -255,12 +257,13 @@ impl<'a> Pathfinder<'a> {
         } else {
             info!(
                 "A path was found: {}",
-                self.print_path(
+                self.path_to_string(
                     &found_path_forwards,
                     &found_path_backwards,
                     &props_forwards,
                     &props_backwards
                 )
+                .unwrap()
             );
         }
 
@@ -302,29 +305,21 @@ impl<'a> Pathfinder<'a> {
     }
 
     // Returns a pretty string representation of the path.
-    fn print_path(
+    fn path_to_string(
         &self,
         path_forwards: &Vec<String>,
         path_backwards: &Vec<String>,
         props_forwards: &Vec<String>,
         props_backwards: &Vec<String>,
-    ) -> String {
+    ) -> Result<String, String> {
         let mut path_string;
 
         if !path_forwards.is_empty() {
-            path_string = format!(
-                "{} ({})",
-                path_forwards.first().unwrap(),
-                self.store_connector
-                    .get_label(path_forwards.first().unwrap())
-            );
+            let stub = path_forwards.first().ok_or("")?;
+            path_string = format!("{} ({})", stub, self.store_connector.get_label(stub));
         } else {
-            path_string = format!(
-                "{} ({})",
-                path_backwards.last().unwrap(),
-                self.store_connector
-                    .get_label(path_backwards.last().unwrap())
-            );
+            let stub = path_backwards.last().ok_or("")?;
+            path_string = format!("{} ({})", stub, self.store_connector.get_label(stub));
         }
 
         for (prop, entity) in props_forwards.iter().zip(path_forwards.iter().skip(1)) {
@@ -351,6 +346,8 @@ impl<'a> Pathfinder<'a> {
             )
         }
 
-        path_string
+        Ok(path_string)
     }
+
+    // TODO implement another function to serialize a path in different formats
 }
