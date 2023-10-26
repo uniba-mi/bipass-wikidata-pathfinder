@@ -1,6 +1,6 @@
 use crate::store_connector::StoreConnector;
 
-// TODO Improve costs function; maybe take property quality into account?
+// TODO Improve costs function; maybe take property frequency into account?
 // Calculates the costs of a path comprising entities.
 // Costs mapping fScore from https://en.wikipedia.org/wiki/A*_search_algorithm cannot be used for us as we use the average (!) semantic distance in the g costs
 pub fn calculate_costs(
@@ -8,7 +8,7 @@ pub fn calculate_costs(
     source_entity: &str,
     target_entity: &str,
     path: &Vec<String>,
-    props: &Vec<String>,
+    _props: &Vec<String>,
     hyperparameter_config: &(f64, f64, f64),
 ) -> i64 {
     

@@ -1,7 +1,7 @@
+use itertools::{izip, Itertools};
 use log::{debug, info};
 use priority_queue::DoublePriorityQueue; // allows to extract minimum in contrast to PriorityQueue
 use std::collections::{HashMap, HashSet};
-use std::io;
 
 use crate::costs_calculator::calculate_costs;
 use crate::store_connector::StoreConnector;
@@ -30,7 +30,7 @@ impl<'a> Pathfinder<'a> {
         source_entity: &str,
         target_entity: &str,
         hyperparameter_config: &(f64, f64, f64),
-    ) -> (Vec<String>, Vec<String>, usize) {
+    ) -> (Vec<String>, Vec<String>, usize, String) {
         // initialize mappings and adjacency list based on source and target entity
         self.store_connector.get_adjacent_entities(source_entity);
         self.store_connector.get_adjacent_entities(target_entity);
@@ -167,10 +167,7 @@ impl<'a> Pathfinder<'a> {
             if came_from_source.contains_key(&current_entity)
                 && came_from_target.contains_key(&current_entity)
             {
-                debug!(
-                    "Path found via an intersection on entity {}.",
-                    current_entity
-                );
+                debug!("Path found via an intersection on entity {current_entity}.");
 
                 (found_path_forwards, props_forwards) = self.reconstruct_path(
                     &came_from_source,
@@ -267,10 +264,21 @@ impl<'a> Pathfinder<'a> {
             );
         }
 
+        // serialize path as turtle
+        let turtle_string = self
+            .path_to_turtle(
+                &found_path_forwards,
+                &found_path_backwards,
+                &props_forwards,
+                &props_backwards,
+            )
+            .unwrap();
+
         (
             found_path_forwards,
             found_path_backwards,
             visited_entities.len(),
+            turtle_string,
         )
     }
 
@@ -294,8 +302,7 @@ impl<'a> Pathfinder<'a> {
         props.reverse();
 
         debug!(
-            "reconstruct_path received current_entity {} and returned {:?} with props {:?}.",
-            current_entity, path, props
+            "reconstruct_path received current_entity {current_entity} and returned {:?} with props {:?}.", path, props
         );
 
         // a path features n entities and exactly n-1 properties
@@ -316,18 +323,16 @@ impl<'a> Pathfinder<'a> {
 
         if !path_forwards.is_empty() {
             let stub = path_forwards.first().ok_or("")?;
-            path_string = format!("{} ({})", stub, self.store_connector.get_label(stub));
+            path_string = format!("{stub} ({})", self.store_connector.get_label(stub));
         } else {
             let stub = path_backwards.last().ok_or("")?;
-            path_string = format!("{} ({})", stub, self.store_connector.get_label(stub));
+            path_string = format!("{stub} ({})", self.store_connector.get_label(stub));
         }
 
         for (prop, entity) in props_forwards.iter().zip(path_forwards.iter().skip(1)) {
             path_string += &format!(
-                " -{} ({})-> {} ({})",
-                prop,
+                " -{prop} ({})-> {entity} ({})",
                 self.store_connector.get_label(prop),
-                entity,
                 self.store_connector.get_label(entity)
             )
         }
@@ -338,10 +343,8 @@ impl<'a> Pathfinder<'a> {
             .zip(path_backwards.iter().rev().skip(1))
         {
             path_string += &format!(
-                " <-{} ({})- {} ({})",
-                prop,
+                " <-{prop} ({})- {entity} ({})",
                 self.store_connector.get_label(prop),
-                entity,
                 self.store_connector.get_label(entity)
             )
         }
@@ -349,5 +352,63 @@ impl<'a> Pathfinder<'a> {
         Ok(path_string)
     }
 
-    // TODO implement another function to serialize a path in different formats
+    // TODO add description for triple components
+    // TODO use a proper rdf serialization library for this function
+    fn path_to_turtle(
+        &self,
+        path_forwards: &Vec<String>,
+        path_backwards: &Vec<String>,
+        props_forwards: &Vec<String>,
+        props_backwards: &Vec<String>,
+    ) -> Result<String, String> {
+        let mut path_turtle = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @prefix schema: <http://schema.org/> .
+        @prefix wd: <http://www.wikidata.org/entity/> .
+        @prefix wdt: <http://www.wikidata.org/prop/direct/> ."
+            .to_string();
+
+        // serialize forwards path
+        for (subject, predicate, object) in
+            izip!(path_forwards, props_forwards, path_forwards.iter().skip(1))
+        {
+            let subject_label = self.store_connector.get_label(subject);
+            let triple = format!(
+                "\nwd:{subject} rdfs:label \"{subject_label}\" ; schema:description \"\" ; wdt:{predicate} wd:{object} ."
+            );
+
+            path_turtle += &triple;
+        }
+
+        // serialize backwards path
+        for (subject, predicate, object) in izip!(
+            path_backwards,
+            props_backwards,
+            path_backwards.iter().skip(1)
+        ) {
+            let subject_label = self.store_connector.get_label(subject);
+            let triple = format!(
+                "\nwd:{subject} rdfs:label \"{subject_label}\" ; schema:description \"\" ; wdt:{predicate} wd:{object} ."
+            );
+
+            path_turtle += &triple;
+        }
+
+        // add labels and descriptions for properties
+        let unique_props: Vec<&String> = props_forwards
+            .iter()
+            .chain(props_backwards)
+            .unique()
+            .collect();
+
+        for prop in unique_props {
+            let prop_label = self.store_connector.get_label(prop);
+            let prop_data: String =
+                format!("\nwd:{prop} rdfs:label \"{prop_label}\" ; schema:description \"\" .");
+
+            path_turtle += &prop_data;
+        }
+
+        Ok(path_turtle)
+    }
 }

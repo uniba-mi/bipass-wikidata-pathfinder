@@ -140,7 +140,7 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>, pathfinder: &Pathfind
             );
 
             // find a path given the provided configuration
-            let (found_path_forwards, found_path_backwards, visited_entity_count) = pathfinder
+            let (found_path_forwards, found_path_backwards, visited_entity_count, _) = pathfinder
                 .find_path(
                     source_entity,
                     target_entity,
@@ -269,7 +269,7 @@ fn benchmark(config: &toml::map::Map<String, toml::Value>, pathfinder: &Pathfind
             );
 
             // execute the pathfinding
-            let (found_path_forwards, found_path_backwards, visited_entity_count) =
+            let (found_path_forwards, found_path_backwards, visited_entity_count, _) =
                 pathfinder.find_path(source_entity, target_entity, hyperparameter_config);
 
             // update results
@@ -372,9 +372,10 @@ fn playground(pathfinder: &Pathfinder) {
     pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
     pathfinder.find_path(entity_b, entity_a, hyperparameter_config);
 
-    // actual test query from derived query set
+    // actual test query from derived query set + printing path serialized turtle
     entity_a = "Q376657";
     entity_b = "Q1951366";
 
-    pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
+    let (_, _, _, turtle_string) = pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
+    info!("{turtle_string}");
 }
