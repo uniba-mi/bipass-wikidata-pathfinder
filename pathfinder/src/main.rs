@@ -1,5 +1,6 @@
 use env_logger;
 use log::info;
+use pathfinder::Pathfinder;
 use simplers_optimization::Optimizer;
 use statrs::statistics::Statistics;
 use std::env;
@@ -11,6 +12,9 @@ use toml::Table;
 #[path = "./pathfinder.rs"]
 mod pathfinder;
 
+#[path = "./costs_calculator.rs"]
+mod costs_calculator;
+
 #[path = "./store_connector.rs"]
 mod store_connector;
 use crate::store_connector::StoreConnector;
@@ -20,11 +24,6 @@ mod api_connector;
 use crate::api_connector::ApiConnector;
 
 fn main() {
-    // initialize logger
-    env_logger::builder()
-        .filter_level(log::LevelFilter::Info)
-        .init();
-
     // load configuration
     let config_data: std::string::String =
         fs::read_to_string("./config.toml").expect("config.toml could not be read.");
@@ -33,22 +32,24 @@ fn main() {
 
     // read command line arguments
     let args: Vec<String> = env::args().collect();
-    let option = args
-        .get(1)
-        .cloned()
-        .unwrap_or_else(|| String::from("playground"));
 
-    // run corresponding function
-    match option.as_str() {
-        "playground" => playground(&config),
-        "optimizer" => optimizer(&config),
-        "benchmark" => benchmark(&config),
-        _ => panic!("This command line option is not supported."),
+    // parse the mode argument
+    let mode = args.get(1).cloned().unwrap_or("playground".to_string());
+
+    // parse the logger level argument
+    let logger_level = args.get(2).cloned().unwrap_or("info".to_string());
+
+    // initialize logger based on specified logger level
+    match logger_level.as_str() {
+        "info" => env_logger::builder()
+            .filter_level(log::LevelFilter::Info)
+            .init(),
+        "debug" => env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .init(),
+        _ => panic!("Specified logger level is not supported."),
     }
-}
 
-// TODO maybe switch to gradient descent or so with argmin crate (https://github.com/argmin-rs/argmin)
-fn optimizer(config: &toml::map::Map<String, toml::Value>) {
     // create ApiConnector instance
     let api_connector: ApiConnector = api_connector::ApiConnector::new(
         String::from(config["wembed_api"].as_str().unwrap()),
@@ -67,10 +68,19 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
     // create Pathfinder instance
     let pathfinder = pathfinder::Pathfinder::new(
         &store_connector,
-        String::from(config["distance_method"].as_str().unwrap()),
         config["entity_limit"].as_integer().unwrap() as usize,
     );
 
+    // run function corresponding to specified mode
+    match mode.as_str() {
+        "playground" => playground(&pathfinder),
+        "optimizer" => optimizer(&config, &pathfinder),
+        "benchmark" => benchmark(&config, &pathfinder),
+        _ => panic!("Specified pathfinder mode is not supported."),
+    }
+}
+
+fn optimizer(config: &toml::map::Map<String, toml::Value>, pathfinder: &Pathfinder) {
     // collect sample queries for the optimization from the Wikidata query files
     let query_file_paths = config["query_file_paths"]
         .as_array()
@@ -116,9 +126,9 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
     writeln!(file, "alpha,beta,gamma,objective_value").unwrap();
 
     // the function to be optimized
-    let f = |search_params: &[f64]| {
+    let f = |hyperparameter_config: &[f64]| {
         // to collect the scores of the individual pathfinder runs
-        let mut collected_scores: Vec<f64> = Vec::new();
+        let mut scores: Vec<f64> = Vec::new();
 
         // iterate sample queries
         for query in &some_queries {
@@ -126,17 +136,30 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
 
             info!(
                 "******* Optimizer processes query from TREC {} query with alpha={}, beta={}, gamma={}",
-                trec_id, search_params[0], search_params[1], search_params[2]
+                trec_id, hyperparameter_config[0], hyperparameter_config[1], hyperparameter_config[2]
             );
 
             // find a path given the provided configuration
-            let (_, _, score, _) = pathfinder.find_path(
-                source_entity,
-                target_entity,
-                (search_params[0], search_params[1], search_params[2]),
-            );
+            let (found_path_forwards, found_path_backwards, visited_entity_count, _) = pathfinder
+                .find_path(
+                    source_entity,
+                    target_entity,
+                    &(
+                        hyperparameter_config[0],
+                        hyperparameter_config[1],
+                        hyperparameter_config[2],
+                    ),
+                );
 
-            collected_scores.push(score);
+            // the score of a pathfinder run (lower is better) equals the visited entities
+            let mut score = visited_entity_count as f64;
+
+            // double the score to penalize no found path
+            if found_path_forwards.is_empty() && found_path_backwards.is_empty() {
+                score *= 2.0;
+            }
+
+            scores.push(score);
         }
 
         let mut file = OpenOptions::new()
@@ -146,12 +169,15 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
             .unwrap();
 
         // calculate, store, and return the average number of visited entities
-        let objective_value = Statistics::mean(collected_scores);
+        let objective_value = Statistics::mean(scores);
 
         writeln!(
             file,
             "{},{},{},{}",
-            search_params[0], search_params[1], search_params[2], objective_value
+            hyperparameter_config[0],
+            hyperparameter_config[1],
+            hyperparameter_config[2],
+            objective_value
         )
         .unwrap();
 
@@ -175,36 +201,14 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>) {
     println!("{}", results_string);
 }
 
-fn benchmark(config: &toml::map::Map<String, toml::Value>) {
-    // create ApiConnector instance
-    let api_connector: ApiConnector = api_connector::ApiConnector::new(
-        String::from(config["wembed_api"].as_str().unwrap()),
-        String::from(config["wikidata_api"].as_str().unwrap()),
-    );
-
-    // create StoreConnector instance
-    let store_connector: StoreConnector = store_connector::StoreConnector::new(
-        &api_connector,
-        String::from(config["label_mapping_path"].as_str().unwrap()),
-        String::from(config["desc_mapping_path"].as_str().unwrap()),
-        String::from(config["distance_mapping_path"].as_str().unwrap()),
-        String::from(config["adjacency_list_path"].as_str().unwrap()),
-    );
-
-    // create Pathfinder instance
-    let pathfinder = pathfinder::Pathfinder::new(
-        &store_connector,
-        String::from(config["distance_method"].as_str().unwrap()),
-        config["entity_limit"].as_integer().unwrap() as usize,
-    );
-
+fn benchmark(config: &toml::map::Map<String, toml::Value>, pathfinder: &Pathfinder) {
     // create configurations for benchmarking
     let benchmark_configs = vec![
         &(0.6991370827362581, 0.10886217551256613, 0.822998046875), // optimized
-        &(0.0, 1.0, 0.0), // uninformed
-        &(1.0, 0.0, 1.0), // semantics-only
-        &(0.0, 0.0, 1.0), // greedy
-        &(1.0, 0.5, 1.0), // balanced
+        &(0.0, 1.0, 0.0),                                           // uninformed
+        &(1.0, 0.0, 1.0),                                           // semantics-only
+        &(0.0, 0.0, 1.0),                                           // greedy
+        &(1.0, 0.5, 1.0),                                           // balanced
     ];
 
     // collect test queries for the benchmark from the Wikidata query files
@@ -252,7 +256,7 @@ fn benchmark(config: &toml::map::Map<String, toml::Value>) {
     for hyperparameter_config in benchmark_configs {
         // create variables for storing benchmark results
         let mut total_successes = 0;
-        let mut collected_visited_entities: Vec<usize> = vec![];
+        let mut collected_counts: Vec<usize> = vec![];
         let mut collected_path_lengths: Vec<usize> = vec![];
 
         // run pathfinder for test queries
@@ -265,27 +269,19 @@ fn benchmark(config: &toml::map::Map<String, toml::Value>) {
             );
 
             // execute the pathfinding
-            let (found_path_forwards, found_path_backwards, _, visited_entities) = pathfinder
-                .find_path(
-                    source_entity,
-                    target_entity,
-                    (
-                        hyperparameter_config.0,
-                        hyperparameter_config.1,
-                        hyperparameter_config.2,
-                    ),
-                );
+            let (found_path_forwards, found_path_backwards, visited_entity_count, _) =
+                pathfinder.find_path(source_entity, target_entity, hyperparameter_config);
 
             // update results
             if found_path_forwards.is_empty() {
-                collected_visited_entities.push(0);
+                collected_counts.push(0);
                 collected_path_lengths.push(0);
             } else {
                 total_successes += 1;
-                collected_visited_entities.push(visited_entities);
+                collected_counts.push(visited_entity_count);
 
-                let path_length = if found_path_backwards.is_some() {
-                    found_path_forwards.len() + found_path_backwards.unwrap().len() - 2
+                let path_length = if found_path_backwards.len() > 0 {
+                    found_path_forwards.len() + found_path_backwards.len() - 2
                 } else {
                     found_path_forwards.len() - 1
                 };
@@ -297,7 +293,7 @@ fn benchmark(config: &toml::map::Map<String, toml::Value>) {
         let success_rate: f32 = total_successes as f32 / some_queries.len() as f32;
 
         // calculate average visited entities for successful cases
-        let visited_entities_cleaned: Vec<f32> = collected_visited_entities
+        let visited_entities_cleaned: Vec<f32> = collected_counts
             .iter()
             .map(|n| *n as f32)
             .filter(|n| n.to_owned() > 0.0)
@@ -355,61 +351,31 @@ path_lengths_entities = {}
     }
 }
 
-fn playground(config: &toml::map::Map<String, toml::Value>) {
-    // create ApiConnector instance
-    let api_connector: ApiConnector = api_connector::ApiConnector::new(
-        String::from(config["wembed_api"].as_str().unwrap()),
-        String::from(config["wikidata_api"].as_str().unwrap()),
-    );
+fn playground(pathfinder: &Pathfinder) {
+    let hyperparameter_config = &(0.23031994047619048, 0.02808779761904762, 0.58984375);
 
-    // create StoreConnector instance
-    let store_connector: StoreConnector = store_connector::StoreConnector::new(
-        &api_connector,
-        String::from(config["label_mapping_path"].as_str().unwrap()),
-        String::from(config["desc_mapping_path"].as_str().unwrap()),
-        String::from(config["distance_mapping_path"].as_str().unwrap()),
-        String::from(config["adjacency_list_path"].as_str().unwrap()),
-    );
-
-    // create Pathfinder instance
-    let pathfinder = pathfinder::Pathfinder::new(
-        &store_connector,
-        String::from(config["distance_method"].as_str().unwrap()),
-        config["entity_limit"].as_integer().unwrap() as usize,
-    );
-
-    let search_params = (0.23031994047619048, 0.02808779761904762, 0.58984375);
-
-    // source -> target: path length 1
     let mut entity_a = "Q42";
     let mut entity_b = "Q5";
 
-    pathfinder.find_path(entity_a, entity_b, search_params);
+    pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
+    pathfinder.find_path(entity_b, entity_a, hyperparameter_config);
 
-    // target -> source: path length 1
-    pathfinder.find_path(entity_b, entity_a, search_params);
+    entity_a = "Q3936";
+    entity_b = "Q21198";
 
-    // source -> intersecting <- target: path length 2
-    entity_a = "Q42";
-    entity_b = "Q762";
+    pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
+    pathfinder.find_path(entity_b, entity_a, hyperparameter_config);
 
-    pathfinder.find_path(entity_a, entity_b, search_params);
-
-    // target -> intersecting <- source: path length 2
-    pathfinder.find_path(entity_b, entity_a, search_params);
-
-    // source -> intersecting <- target: path length 3
     entity_a = "Q42";
     entity_b = "Q389908";
 
-    pathfinder.find_path(entity_a, entity_b, search_params);
+    pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
+    pathfinder.find_path(entity_b, entity_a, hyperparameter_config);
 
-    // target -> intersecting <- source: path length 3
-    pathfinder.find_path(entity_b, entity_a, search_params);
-
-    // actual test query from derived query set
+    // actual test query from derived query set + printing path serialized turtle
     entity_a = "Q376657";
     entity_b = "Q1951366";
 
-    pathfinder.find_path(entity_a, entity_b, search_params);
+    let (_, _, _, turtle_string) = pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
+    info!("{turtle_string}");
 }

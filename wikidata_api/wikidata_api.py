@@ -4,6 +4,7 @@ from time import sleep
 from string import Template
 from flask import Flask, jsonify, request
 from SPARQLWrapper import SPARQLWrapper, JSON
+import csv
 
 
 app = Flask(__name__)
@@ -12,13 +13,26 @@ sparql_wrapper = SPARQLWrapper(
     endpoint_url, agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36")
 
 
+# read property stats from file
+with open("wd_properties.csv", newline="", ) as csvfile:
+    csv_reader = csv.reader(csvfile, delimiter=",")
+    
+    # skip header line
+    next(csv_reader)
+
+    prop_frequency_dict = {}
+
+    for prop, frequency in csv_reader:
+        prop_frequency_dict[prop] = int(frequency)
+
+
 def query_wikidata(query):
     sparql_wrapper.setQuery(query)
     sparql_wrapper.setReturnFormat(JSON)
 
     try:
         results = sparql_wrapper.query().convert()
-        sleep(3)
+        sleep(3) # required to comply with Wikidata's rate limit
     except Exception as e:
         print(f"An error occurred while querying Wikidata: {e}")
         results = {}
@@ -28,7 +42,7 @@ def query_wikidata(query):
 
 @app.route("/")
 def root():
-    return "Hello from the Wikidata API."
+    return "Hello from the wikidata_api!"
 
 
 @app.route("/adjacent_entities", methods=["GET"])
@@ -54,18 +68,13 @@ def adjacent_entities():
 
             $object_id rdfs:label $the_object_label .
             FILTER ( lang($the_object_label) = "en" ) .
-            FILTER ( !CONTAINS ( $the_object_label, "Wiki" ) ) .
-            FILTER REGEX ( $the_object_label, "^[A-z0-9 -]+$$" ) .
 
             $object_id schema:description $the_object_description .
             FILTER ( lang($the_object_description) = "en" ) .
-            FILTER ( !CONTAINS ( $the_object_description, "Wiki" ) ) .
 
             $foo wikibase:directClaim $predicate_id .
             $foo rdfs:label $the_predicate_label.
-            FILTER ( lang($the_predicate_label) = "en" ) .
-            FILTER ( !CONTAINS ( $the_predicate_label, "Wiki" ) ) .
-            FILTER ( $predicate_id != wdt:P1343 ) .""")
+            FILTER ( lang($the_predicate_label) = "en" ) .""")
 
         initial_where_block_content = where_block_template.substitute(
             subject_id="$subject_id0",
@@ -164,6 +173,7 @@ def adjacent_entities():
         }
     ), 200
 
+
 @app.route("/label_description", methods=["GET"])
 def label_description():
     entity = request.args.get("entity")
@@ -206,6 +216,7 @@ def label_description():
         }
     ), 200
 
+
 @app.route("/id", methods=["GET"])
 def id():
     label = request.args.get("label")
@@ -236,6 +247,17 @@ def id():
     
     return id
 
+
+@app.route("/prop_frequencies", methods=["GET"])
+def prop_frequencies():
+    props = request.args.get("props").split("-")
+    max_frequency = max(prop_frequency_dict.values())
+
+    relevant_entries = dict(filter(lambda p: p[0] in props, prop_frequency_dict.items()))
+    frequencies = [frequency / max_frequency for _, frequency in relevant_entries.items()]
+
+    return frequencies if frequencies else []
+    
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0")
