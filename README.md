@@ -5,8 +5,7 @@
     <br>
 </p>
 
-<!-- TODO: not compatible with anonymized version of the repo; add this afterwards -->
-<!-- <p align="center">
+<p align="center">
     <a href="#requirements">Requirements</a>
     •
     <a href="#query-factory">Query Factory</a>
@@ -16,7 +15,7 @@
     <a href="#pathfinding-system">Pathfinding System</a>
     •
     <a href="#license">License</a>
-</p> -->
+</p>
 
 This repository contains all materials for reproducing the outcomes described in the research paper [Further Investigation of Fast Pathfinding in Wikidata](https://doi.org/10.3233/ssw230009). This comprises the following artifacts:
 
