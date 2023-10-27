@@ -352,7 +352,7 @@ impl<'a> Pathfinder<'a> {
         Ok(path_string)
     }
 
-    // TODO add description for triple components
+    // TODO add description for props
     // TODO use a proper rdf serialization library for this function
     fn path_to_turtle(
         &self,
@@ -373,8 +373,9 @@ impl<'a> Pathfinder<'a> {
             izip!(path_forwards, props_forwards, path_forwards.iter().skip(1))
         {
             let subject_label = self.store_connector.get_label(subject);
+            let subject_description = self.store_connector.get_description(subject);
             let triple = format!(
-                "\nwd:{subject} rdfs:label \"{subject_label}\" ; schema:description \"\" ; wdt:{predicate} wd:{object} ."
+                "\nwd:{subject} rdfs:label \"{subject_label}\" ; schema:description \"{subject_description}\" ; wdt:{predicate} wd:{object} ."
             );
 
             path_turtle += &triple;
@@ -387,8 +388,9 @@ impl<'a> Pathfinder<'a> {
             path_backwards.iter().skip(1)
         ) {
             let subject_label = self.store_connector.get_label(subject);
+            let subject_description = self.store_connector.get_description(subject);
             let triple = format!(
-                "\nwd:{subject} rdfs:label \"{subject_label}\" ; schema:description \"\" ; wdt:{predicate} wd:{object} ."
+                "\nwd:{subject} rdfs:label \"{subject_label}\" ; schema:description \"{subject_description}\" ; wdt:{predicate} wd:{object} ."
             );
 
             path_turtle += &triple;
