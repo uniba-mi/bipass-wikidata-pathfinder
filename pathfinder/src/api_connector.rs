@@ -43,6 +43,7 @@ impl ApiConnector {
         Map<String, Value>,
         Map<String, Value>,
         Map<String, Value>,
+        Map<String, Value>,
     ) {
         let mut json = Default::default();
 
@@ -76,11 +77,13 @@ impl ApiConnector {
         let q_label_data = json.get("q_labels").unwrap().as_object().unwrap();
         let q_desc_data = json.get("q_descriptions").unwrap().as_object().unwrap();
         let p_label_data = json.get("p_labels").unwrap().as_object().unwrap();
+        let p_desc_data = json.get("p_descriptions").unwrap().as_object().unwrap();
 
         return (
             q_label_data.clone(),
             q_desc_data.clone(),
             p_label_data.clone(),
+            p_desc_data.clone(),
             adjacent_entities_data.clone(),
         );
     }

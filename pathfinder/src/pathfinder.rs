@@ -372,8 +372,8 @@ impl<'a> Pathfinder<'a> {
         for (subject, predicate, object) in
             izip!(path_forwards, props_forwards, path_forwards.iter().skip(1))
         {
-            let subject_label = self.store_connector.get_label(subject);
-            let subject_description = self.store_connector.get_description(subject);
+            let subject_label = self.store_connector.get_label(subject).replace('"', "\"");
+            let subject_description = self.store_connector.get_description(subject).replace('"', "\"");
             let triple = format!(
                 "\nwd:{subject} rdfs:label \"{subject_label}\" ; schema:description \"{subject_description}\" ; wdt:{predicate} wd:{object} ."
             );
@@ -387,8 +387,8 @@ impl<'a> Pathfinder<'a> {
             props_backwards,
             path_backwards.iter().skip(1)
         ) {
-            let subject_label = self.store_connector.get_label(subject);
-            let subject_description = self.store_connector.get_description(subject);
+            let subject_label = self.store_connector.get_label(subject).replace("\"", "\\\"");
+            let subject_description = self.store_connector.get_description(subject).replace("\"", "\\\"");
             let triple = format!(
                 "\nwd:{subject} rdfs:label \"{subject_label}\" ; schema:description \"{subject_description}\" ; wdt:{predicate} wd:{object} ."
             );
@@ -404,9 +404,10 @@ impl<'a> Pathfinder<'a> {
             .collect();
 
         for prop in unique_props {
-            let prop_label = self.store_connector.get_label(prop);
+            let prop_label = self.store_connector.get_label(prop).replace("\"", "\\\"");
+            let prop_description = self.store_connector.get_description(prop).replace("\"", "\\\"");
             let prop_data: String =
-                format!("\nwd:{prop} rdfs:label \"{prop_label}\" ; schema:description \"\" .");
+                format!("\nwd:{prop} rdfs:label \"{prop_label}\" ; schema:description \"{prop_description}\" .");
 
             path_turtle += &prop_data;
         }
