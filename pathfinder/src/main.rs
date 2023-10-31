@@ -149,6 +149,7 @@ fn optimizer(config: &toml::map::Map<String, toml::Value>, pathfinder: &Pathfind
                         hyperparameter_config[1],
                         hyperparameter_config[2],
                     ),
+                    false,
                 );
 
             // the score of a pathfinder run (lower is better) equals the visited entities
@@ -270,7 +271,7 @@ fn benchmark(config: &toml::map::Map<String, toml::Value>, pathfinder: &Pathfind
 
             // execute the pathfinding
             let (found_path_forwards, found_path_backwards, visited_entity_count, _) =
-                pathfinder.find_path(source_entity, target_entity, hyperparameter_config);
+                pathfinder.find_path(source_entity, target_entity, hyperparameter_config, false);
 
             // update results
             if found_path_forwards.is_empty() {
@@ -357,25 +358,26 @@ fn playground(pathfinder: &Pathfinder) {
     let mut entity_a = "Q42";
     let mut entity_b = "Q5";
 
-    pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
-    pathfinder.find_path(entity_b, entity_a, hyperparameter_config);
+    pathfinder.find_path(entity_a, entity_b, hyperparameter_config, false);
+    pathfinder.find_path(entity_b, entity_a, hyperparameter_config, false);
 
     entity_a = "Q3936";
     entity_b = "Q21198";
 
-    pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
-    pathfinder.find_path(entity_b, entity_a, hyperparameter_config);
+    pathfinder.find_path(entity_a, entity_b, hyperparameter_config, false);
+    pathfinder.find_path(entity_b, entity_a, hyperparameter_config, false);
 
     entity_a = "Q42";
     entity_b = "Q389908";
 
-    pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
-    pathfinder.find_path(entity_b, entity_a, hyperparameter_config);
+    pathfinder.find_path(entity_a, entity_b, hyperparameter_config, false);
+    pathfinder.find_path(entity_b, entity_a, hyperparameter_config, false);
 
     // actual test query from derived query set + printing path serialized turtle
     entity_a = "Q376657";
     entity_b = "Q1951366";
 
-    let (_, _, _, turtle_string) = pathfinder.find_path(entity_a, entity_b, hyperparameter_config);
+    let (_, _, _, turtle_string) =
+        pathfinder.find_path(entity_a, entity_b, hyperparameter_config, false);
     info!("{turtle_string}");
 }

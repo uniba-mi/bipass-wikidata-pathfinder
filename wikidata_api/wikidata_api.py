@@ -258,10 +258,14 @@ def id():
     id = result_bindings[0]["item"]["value"].split(
         "/")[-1] if result_bindings else ""
     
-    return id
+    return jsonify(
+        {
+            "id": id,
+        }
+    ), 200
 
 
-@app.route("/prop_frequencies", methods=["GET"])
+@app.route("/average_prop_frequency", methods=["GET"])
 def prop_frequencies():
     props = request.args.get("props").split("-")
     max_frequency = max(prop_frequency_dict.values())
@@ -269,8 +273,13 @@ def prop_frequencies():
     relevant_entries = dict(filter(lambda p: p[0] in props, prop_frequency_dict.items()))
     frequencies = [frequency / max_frequency for _, frequency in relevant_entries.items()]
 
-    return frequencies if frequencies else []
-    
+    avg_frequency = sum(frequencies) / len(frequencies) if frequencies else 0.0
+
+    return jsonify(
+        {
+            "average_prop_frequency": avg_frequency,
+        }
+    ), 200    
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0")

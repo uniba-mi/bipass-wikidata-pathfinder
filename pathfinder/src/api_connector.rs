@@ -34,6 +34,7 @@ impl ApiConnector {
     /// * A mapping between entity IDs and labels
     /// * A mapping between entity IDs and descriptions
     /// * A mapping between property IDs and labels
+    /// * A mapping between property IDs and descriptions
     /// * A mapping between entity IDs and lists with IDs of adjacent entities
     pub fn fetch_adjacent_entity_data(
         &self,
@@ -127,10 +128,20 @@ impl ApiConnector {
             string_b.to_owned(),
         )
     }
+
+    /// Fetches the average frequency of one or more properties.
+    /// To optimize the runtime, a cached function is called.
+    /// # Arguments
+    /// * `props` - The properties
+    /// # Returns
+    /// * The average prop frequency
+    pub fn fetch_average_prop_frequency(&self, props: &Vec<String>) -> f64 {
+        fetch_frequency_cached((&self.wikidata_api).to_owned(), props.to_owned())
+    }
 }
 
 /// A cached function retrieving the semantic distance between two strings via the word embedding API.
-/// The rationale for introducing the separate function is that functions using the cached procedural macro do not allow &self as a parameter.
+/// The reason for introducing a separate cached function is that functions using the cached procedural macro do not allow &self as a parameter.
 /// # Arguments
 /// * `wembed_api` - The base URL of the word embedding API
 /// * `string_a` - The first string
@@ -146,4 +157,22 @@ pub fn fetch_distance_cached(wembed_api: String, string_a: String, string_b: Str
     let fetched_distance = json.get("distance").unwrap().as_f64().unwrap();
 
     fetched_distance
+}
+
+/// A cached function retrieving the average frequency of one or more properties via the Wikidata API.
+/// The reason for introducing a separate cached function is that functions using the cached procedural macro do not allow &self as a parameter.
+/// # Arguments
+/// * `wembed_api` - The base URL of the word embedding API
+/// * `props` - The properties
+/// # Returns
+/// * The average prop frequency
+#[cached]
+pub fn fetch_frequency_cached(wikidata_api: String, props: Vec<String>) -> f64 {
+    let url = format!("{wikidata_api}/average_prop_frequency?props={}", props.join("-"));
+
+    let response = reqwest::blocking::get(url).unwrap().text().unwrap();
+    let json = Value::from_str(&response).unwrap();
+    let average_prop_frequency = json.get("average_prop_frequency").unwrap().as_f64().unwrap();
+
+    average_prop_frequency
 }

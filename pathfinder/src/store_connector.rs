@@ -205,8 +205,14 @@ impl<'a> StoreConnector<'a> {
         distance
     }
 
-    /// For making fallback request if label or description was not be retrieved before.
-    /// Label and description of an entity should already have been retrieved when fetching the adjacent entities of the entity pointing to this entity.
+    // Retrieves the average frequency of one or more properties
+    // This value is not stored locally
+    pub fn get_average_prop_frequency(&self, props: &Vec<String>) -> f64 {
+        return self.api_connector.fetch_average_prop_frequency(props);
+    }
+
+    // For making fallback request if label or description was not be retrieved before.
+    // Label and description of an entity should already have been retrieved when fetching the adjacent entities of the entity pointing to this entity.
     fn fallback_get_label_description(&self, entity: &str) -> (String, String) {
         warn!("Fallback request for label of {} triggered.", entity);
         let (fetched_label, fetched_description) =
