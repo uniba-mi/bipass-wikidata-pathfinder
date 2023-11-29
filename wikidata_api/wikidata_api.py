@@ -50,7 +50,7 @@ def adjacent_entities():
 
     def make_request(depth):
         select_block_content = " ".join(
-            [f'?subject_id{ctr} ?the_subject_label{ctr} ?the_subject_description{ctr} ?predicate_id{ctr} ?the_predicate_label{ctr} ?object_id{ctr} ?the_object_label{ctr} ?the_object_description{ctr}' for ctr in range(depth)])
+            [f'?subject_id{ctr} ?the_subject_label{ctr} ?the_subject_description{ctr} ?predicate_id{ctr} ?the_predicate_label{ctr}  ?the_predicate_description{ctr} ?object_id{ctr} ?the_object_label{ctr} ?the_object_description{ctr}' for ctr in range(depth)])
         select_block = f"SELECT {select_block_content}"
 
         where_block_template = Template("""
@@ -74,7 +74,10 @@ def adjacent_entities():
 
             $foo wikibase:directClaim $predicate_id .
             $foo rdfs:label $the_predicate_label.
-            FILTER ( lang($the_predicate_label) = "en" ) .""")
+            FILTER ( lang($the_predicate_label) = "en" ) .
+            
+            $foo schema:description $the_predicate_description .
+            FILTER ( lang($the_predicate_description) = "en" ) .""")
 
         initial_where_block_content = where_block_template.substitute(
             subject_id="$subject_id0",
@@ -82,6 +85,7 @@ def adjacent_entities():
             the_subject_description="$the_subject_description0",
             predicate_id="$predicate_id0",
             the_predicate_label="$the_predicate_label0",
+            the_predicate_description=f"$the_predicate_description0",
             object_id="$object_id0",
             the_object_label="$the_object_label0",
             the_object_description="$the_object_description0",
@@ -93,6 +97,7 @@ def adjacent_entities():
             the_subject_description=f"$the_subject_description{ctr}",
             predicate_id=f"$predicate_id{ctr}",
             the_predicate_label=f"$the_predicate_label{ctr}",
+            the_predicate_description=f"$the_predicate_description{ctr}",
             object_id=f"$object_id{ctr}",
             the_object_label=f"$the_object_label{ctr}",
             the_object_description=f"$the_object_description{ctr}",
@@ -121,6 +126,7 @@ def adjacent_entities():
                 "q_labels": {},
                 "q_descriptions": {},
                 "p_labels": {},
+                "p_descriptions": {},
             }
         ), 200
 
@@ -128,6 +134,7 @@ def adjacent_entities():
     clean_q_labels = dict()
     clean_q_descriptions = dict()
     clean_p_labels = dict()
+    clean_p_descriptions = dict()
     default = []
 
     for result in results["results"]["bindings"]:
@@ -147,6 +154,8 @@ def adjacent_entities():
 
         clean_p_labels[result["predicate_id0"]["value"].split(
             "/")[-1]] = result["the_predicate_label0"]["value"]
+        clean_p_descriptions[result["predicate_id0"]["value"].split(
+            "/")[-1]] = result["the_predicate_description0"]["value"]
 
         for ctr in range(1, depth):
             subject = result[f"object_id{ctr-1}"]["value"].split("/")[-1]
@@ -160,8 +169,11 @@ def adjacent_entities():
 
             clean_q_labels[object] = result[f"the_object_label{ctr}"]["value"]
             clean_q_descriptions[object] = result[f"the_object_description{ctr}"]["value"]
+
             clean_p_labels[result[f"predicate_id{ctr}"]["value"].split(
                 "/")[-1]] = result[f"the_predicate_label{ctr}"]["value"]
+            clean_p_descriptions[result[f"predicate_id{ctr}"]["value"].split(
+                "/")[-1]] = result[f"the_predicate_description{ctr}"]["value"]
 
 
     return jsonify(
@@ -170,6 +182,7 @@ def adjacent_entities():
             "q_labels": clean_q_labels,
             "q_descriptions": clean_q_descriptions,
             "p_labels": clean_p_labels,
+            "p_descriptions": clean_p_descriptions,
         }
     ), 200
 
@@ -245,8 +258,28 @@ def id():
     id = result_bindings[0]["item"]["value"].split(
         "/")[-1] if result_bindings else ""
     
-    return id
+    return jsonify(
+        {
+            "id": id,
+        }
+    ), 200
 
+
+@app.route("/average_prop_frequency", methods=["GET"])
+def average_prop_frequency():
+    props = request.args.get("props").split("-")
+    max_frequency = max(prop_frequency_dict.values())
+
+    relevant_entries = dict(filter(lambda p: p[0] in props, prop_frequency_dict.items()))
+    frequencies = [frequency / max_frequency for _, frequency in relevant_entries.items()]
+
+    avg_frequency = sum(frequencies) / len(frequencies) if frequencies else 0.0
+
+    return jsonify(
+        {
+            "average_prop_frequency": avg_frequency,
+        }
+    ), 200    
 
 @app.route("/prop_frequencies", methods=["GET"])
 def prop_frequencies():

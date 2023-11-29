@@ -1,19 +1,17 @@
 use crate::store_connector::StoreConnector;
 
-// TODO Improve costs function; maybe take property frequency into account?
-// Calculates the costs of a path comprising entities.
+// Calculates the costs of a path.
 // Costs mapping fScore from https://en.wikipedia.org/wiki/A*_search_algorithm cannot be used for us as we use the average (!) semantic distance in the g costs
 pub fn calculate_costs(
     store_connector: &StoreConnector,
     source_entity: &str,
     target_entity: &str,
     path: &Vec<String>,
-    _props: &Vec<String>,
+    average_prop_frequency: f64,
     hyperparameter_config: &(f64, f64, f64),
 ) -> i64 {
-    
     let (alpha, beta, gamma) = hyperparameter_config;
-    let (g1, g2, h, costs);
+    let (g1, g2, h);
 
     let directional_target_entity;
 
@@ -36,7 +34,6 @@ pub fn calculate_costs(
         let total_distance: f64 = path_except_last.iter().fold(0.0, |acc, e| {
             acc + store_connector.get_semantic_distance(e, directional_target_entity)
         });
-        
         let average_distance = total_distance / path_except_last.len() as f64;
 
         g1 = alpha * average_distance;
@@ -54,15 +51,16 @@ pub fn calculate_costs(
         h = 0.0;
     } else {
         h = gamma
-            * store_connector.get_semantic_distance(
-                &path.last().unwrap(),
-                directional_target_entity,
-            );
+            * store_connector
+                .get_semantic_distance(&path.last().unwrap(), directional_target_entity);
     }
 
-    costs = g1 + g2 + h;
+    let mut costs = g1 + g2 + h;
 
-    // TODO take specificity of properties into account
+    // TODO evaluate if this improves path quality
+    // increase costs based on the average frequency of props on the path
+    // props with higher frequency are less interesting -> higher costs
+    costs = costs * (1.0 + average_prop_frequency);
 
     // costs must not be negative
     assert!(costs >= 0.0);

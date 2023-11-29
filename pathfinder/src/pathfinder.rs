@@ -30,6 +30,7 @@ impl<'a> Pathfinder<'a> {
         source_entity: &str,
         target_entity: &str,
         hyperparameter_config: &(f64, f64, f64),
+        consider_prop_frequency: bool,
     ) -> (Vec<String>, Vec<String>, usize, String) {
         // initialize mappings and adjacency list based on source and target entity
         self.store_connector.get_adjacent_entities(source_entity);
@@ -216,16 +217,24 @@ impl<'a> Pathfinder<'a> {
                 let mut candidate_path = path.clone();
                 candidate_path.push(adjacent_entity.clone());
 
-                let mut candidate_props = path.clone();
+                let mut candidate_props = props.clone();
                 candidate_props.push(prop.clone());
 
+                // if prop frequency is considered retrieve it
+                let average_prop_frequency = if consider_prop_frequency {
+                    self.store_connector
+                    .get_average_prop_frequency(&candidate_props)
+                } else {
+                    0.0
+                };
+                
                 // calculate costs of path
                 let tentative_costs = calculate_costs(
                     self.store_connector,
                     source_entity,
                     target_entity,
                     &candidate_path,
-                    &candidate_props,
+                    average_prop_frequency,
                     hyperparameter_config,
                 );
 
@@ -352,7 +361,7 @@ impl<'a> Pathfinder<'a> {
         Ok(path_string)
     }
 
-    // TODO add description for triple components
+    // TODO add description for props
     // TODO use a proper rdf serialization library for this function
     fn path_to_turtle(
         &self,
@@ -372,9 +381,13 @@ impl<'a> Pathfinder<'a> {
         for (subject, predicate, object) in
             izip!(path_forwards, props_forwards, path_forwards.iter().skip(1))
         {
-            let subject_label = self.store_connector.get_label(subject);
+            let subject_label = self.store_connector.get_label(subject).replace('"', "\"");
+            let subject_description = self
+                .store_connector
+                .get_description(subject)
+                .replace('"', "\"");
             let triple = format!(
-                "\nwd:{subject} rdfs:label \"{subject_label}\" ; schema:description \"\" ; wdt:{predicate} wd:{object} ."
+                "\nwd:{subject} rdfs:label \"{subject_label}\" ; schema:description \"{subject_description}\" ; wdt:{predicate} wd:{object} ."
             );
 
             path_turtle += &triple;
@@ -386,9 +399,16 @@ impl<'a> Pathfinder<'a> {
             props_backwards,
             path_backwards.iter().skip(1)
         ) {
-            let subject_label = self.store_connector.get_label(subject);
+            let subject_label = self
+                .store_connector
+                .get_label(subject)
+                .replace("\"", "\\\"");
+            let subject_description = self
+                .store_connector
+                .get_description(subject)
+                .replace("\"", "\\\"");
             let triple = format!(
-                "\nwd:{subject} rdfs:label \"{subject_label}\" ; schema:description \"\" ; wdt:{predicate} wd:{object} ."
+                "\nwd:{subject} rdfs:label \"{subject_label}\" ; schema:description \"{subject_description}\" ; wdt:{predicate} wd:{object} ."
             );
 
             path_turtle += &triple;
@@ -402,9 +422,13 @@ impl<'a> Pathfinder<'a> {
             .collect();
 
         for prop in unique_props {
-            let prop_label = self.store_connector.get_label(prop);
+            let prop_label = self.store_connector.get_label(prop).replace("\"", "\\\"");
+            let prop_description = self
+                .store_connector
+                .get_description(prop)
+                .replace("\"", "\\\"");
             let prop_data: String =
-                format!("\nwd:{prop} rdfs:label \"{prop_label}\" ; schema:description \"\" .");
+                format!("\nwd:{prop} rdfs:label \"{prop_label}\" ; schema:description \"{prop_description}\" .");
 
             path_turtle += &prop_data;
         }

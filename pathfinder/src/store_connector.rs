@@ -54,7 +54,7 @@ impl<'a> StoreConnector<'a> {
             || !self.desc_mapping.contains_key(entity).unwrap()
             || !self.adjacency_list.contains_key(entity).unwrap()
         {
-            let (q_label_data, q_desc_data, p_label_data, adjacent_entities_data) =
+            let (q_label_data, q_desc_data, p_label_data, p_desc_data, adjacent_entities_data) =
                 self.api_connector.fetch_adjacent_entity_data(entity);
 
             let mut batch = Batch::default();
@@ -93,6 +93,10 @@ impl<'a> StoreConnector<'a> {
             // update the desc mapping for all retrieved entities
             batch = Batch::default();
             q_desc_data.iter().for_each(|(e, l)| {
+                batch.insert(e.as_str(), l.as_str().unwrap());
+            });
+
+            p_desc_data.iter().for_each(|(e, l)| {
                 batch.insert(e.as_str(), l.as_str().unwrap());
             });
 
@@ -201,8 +205,14 @@ impl<'a> StoreConnector<'a> {
         distance
     }
 
-    /// For making fallback request if label or description was not be retrieved before.
-    /// Label and description of an entity should already have been retrieved when fetching the adjacent entities of the entity pointing to this entity.
+    // Retrieves the average frequency of one or more properties
+    // This value is not stored locally
+    pub fn get_average_prop_frequency(&self, props: &Vec<String>) -> f64 {
+        return self.api_connector.fetch_average_prop_frequency(props);
+    }
+
+    // For making fallback request if label or description was not be retrieved before.
+    // Label and description of an entity should already have been retrieved when fetching the adjacent entities of the entity pointing to this entity.
     fn fallback_get_label_description(&self, entity: &str) -> (String, String) {
         warn!("Fallback request for label of {} triggered.", entity);
         let (fetched_label, fetched_description) =
