@@ -34,7 +34,6 @@ pub fn calculate_costs(
         let total_distance: f64 = path_except_last.iter().fold(0.0, |acc, e| {
             acc + store_connector.get_semantic_distance(e, directional_target_entity)
         });
-
         let average_distance = total_distance / path_except_last.len() as f64;
 
         g1 = alpha * average_distance;

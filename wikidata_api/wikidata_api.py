@@ -266,7 +266,7 @@ def id():
 
 
 @app.route("/average_prop_frequency", methods=["GET"])
-def prop_frequencies():
+def average_prop_frequency():
     props = request.args.get("props").split("-")
     max_frequency = max(prop_frequency_dict.values())
 
@@ -280,6 +280,17 @@ def prop_frequencies():
             "average_prop_frequency": avg_frequency,
         }
     ), 200    
+
+@app.route("/prop_frequencies", methods=["GET"])
+def prop_frequencies():
+    props = request.args.get("props").split("-")
+    max_frequency = max(prop_frequency_dict.values())
+
+    relevant_entries = dict(filter(lambda p: p[0] in props, prop_frequency_dict.items()))
+    frequencies = [frequency / max_frequency for _, frequency in relevant_entries.items()]
+
+    return frequencies if frequencies else []
+    
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0")
