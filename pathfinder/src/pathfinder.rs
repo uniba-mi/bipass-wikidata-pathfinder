@@ -370,12 +370,14 @@ impl<'a> Pathfinder<'a> {
         props_forwards: &Vec<String>,
         props_backwards: &Vec<String>,
     ) -> Result<String, String> {
-        let mut path_turtle = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-        @prefix schema: <http://schema.org/> .
-        @prefix wd: <http://www.wikidata.org/entity/> .
-        @prefix wdt: <http://www.wikidata.org/prop/direct/> ."
-            .to_string();
+        let mut path_turtle = 
+"
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <http://schema.org/> .
+@prefix wd: <http://www.wikidata.org/entity/> .
+@prefix wdt: <http://www.wikidata.org/prop/direct/> .
+".to_string();
 
         // serialize forwards path
         for (subject, predicate, object) in
@@ -392,6 +394,20 @@ impl<'a> Pathfinder<'a> {
 
             path_turtle += &triple;
         }
+
+        // add label and description of last entity on forwards path
+        let last_entity = path_forwards.last().unwrap();
+
+        let entity_label = self.store_connector.get_label(last_entity).replace('"', "\"");
+        let entity_description = self
+            .store_connector
+            .get_description(last_entity)
+            .replace('"', "\"");
+        let triple = format!(
+            "\nwd:{last_entity} rdfs:label \"{entity_label}\" ; schema:description \"{entity_description}\" ."
+        );
+
+        path_turtle += &triple;
 
         // serialize backwards path
         for (subject, predicate, object) in izip!(

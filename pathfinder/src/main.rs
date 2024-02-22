@@ -355,27 +355,27 @@ path_lengths_entities = {}
 fn playground(pathfinder: &Pathfinder) {
     let hyperparameter_config = &(0.23031994047619048, 0.02808779761904762, 0.58984375);
 
-    let mut entity_a = "Q42";
-    let mut entity_b = "Q5";
+    let mut entity_a = "Q300";
+    let mut entity_b = "Q42";
 
     pathfinder.find_path(entity_a, entity_b, hyperparameter_config, false);
     pathfinder.find_path(entity_b, entity_a, hyperparameter_config, false);
 
-    entity_a = "Q3936";
-    entity_b = "Q21198";
+    // entity_a = "Q3936";
+    // entity_b = "Q21198";
 
-    pathfinder.find_path(entity_a, entity_b, hyperparameter_config, false);
-    pathfinder.find_path(entity_b, entity_a, hyperparameter_config, false);
+    // pathfinder.find_path(entity_a, entity_b, hyperparameter_config, false);
+    // pathfinder.find_path(entity_b, entity_a, hyperparameter_config, false);
 
-    entity_a = "Q42";
-    entity_b = "Q389908";
+    // entity_a = "Q42";
+    // entity_b = "Q389908";
 
-    pathfinder.find_path(entity_a, entity_b, hyperparameter_config, false);
-    pathfinder.find_path(entity_b, entity_a, hyperparameter_config, false);
+    // pathfinder.find_path(entity_a, entity_b, hyperparameter_config, false);
+    // pathfinder.find_path(entity_b, entity_a, hyperparameter_config, false);
 
-    // actual test query from derived query set + printing path serialized turtle
-    entity_a = "Q376657";
-    entity_b = "Q1951366";
+    // // actual test query from derived query set + printing path serialized turtle
+    // entity_a = "Q376657";
+    // entity_b = "Q1951366";
 
     let (_, _, _, turtle_string) =
         pathfinder.find_path(entity_a, entity_b, hyperparameter_config, false);
